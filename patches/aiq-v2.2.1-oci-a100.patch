@@ -1,0 +1,142 @@
+--- a/deploy/compose/docker-compose.yaml
++++ b/deploy/compose/docker-compose.yaml
+@@ -31,3 +31,3 @@
+   aiq-agent:
+-    image: ${BACKEND_IMAGE:-nvcr.io/nvidia/blueprint/aiq-agent:2.2.1}
++    image: nvcr.io/nvidia/blueprint/aiq-agent:2.2.1
+     build:
+@@ -36,5 +36,3 @@
+       target: ${BUILD_TARGET:-dev}
+-    container_name: aiq-agent
+-    env_file:
+-      - ../.env
++    container_name: ${LAB_ID:?prepare a etapa 3}-aiq-agent
+     environment:
+@@ -43,5 +41,5 @@
+       # Database config (with Docker defaults)
+-      - NAT_JOB_STORE_DB_URL=${NAT_JOB_STORE_DB_URL:-postgresql+asyncpg://aiq:aiq_dev@postgres:5432/aiq_jobs}
+-      - AIQ_CHECKPOINT_DB=${AIQ_CHECKPOINT_DB:-postgresql://aiq:aiq_dev@postgres:5432/aiq_checkpoints}
+-      - AIQ_SUMMARY_DB=${AIQ_SUMMARY_DB:-postgresql+psycopg://aiq:aiq_dev@postgres:5432/aiq_jobs}
++      - NAT_JOB_STORE_DB_URL=postgresql+asyncpg://aiq:${LAB_DB_PASSWORD:?missing DB password}@postgres:5432/aiq_jobs
++      - AIQ_CHECKPOINT_DB=postgresql://aiq:${LAB_DB_PASSWORD:?missing DB password}@postgres:5432/aiq_checkpoints
++      - AIQ_SUMMARY_DB=postgresql+psycopg://aiq:${LAB_DB_PASSWORD:?missing DB password}@postgres:5432/aiq_jobs
+       # LlamaIndex persistence (used by config_web_default_llamaindex.yml)
+@@ -50,3 +48,3 @@
+       # LlamaIndex (default)
+-      - CONFIG_FILE=${BACKEND_CONFIG:-/app/configs/config_web_default_llamaindex.yml}
++      - CONFIG_FILE=/app/configs/config_web_frag.yml
+       - HOST=0.0.0.0
+@@ -74,4 +72,10 @@
+       # - DASK_LIFETIME_RESTART=${DASK_LIFETIME_RESTART:-}
++      - NVIDIA_API_KEY=not-needed
++      - TAVILY_API_KEY=${TAVILY_API_KEY:?configure Tavily}
++      - LOCAL_LLM_MODEL=${LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
++      - LOCAL_LLM_URL=http://nim-llm:8000/v1
++      - RAG_SERVER_URL=http://rag-server:8081/v1
++      - RAG_INGEST_URL=http://ingestor-server:8082/v1
+     ports:
+-      - "${PORT:-8000}:8000"
++      - "127.0.0.1:${AIQ_PORT:-18000}:8000"
+     volumes:
+@@ -80,3 +84,4 @@
+     networks:
+-      - aiq-network
++      - default
++      - rag
+     depends_on:
+@@ -87,3 +92,3 @@
+   frontend:
+-    image: ${FRONTEND_IMAGE:-nvcr.io/nvidia/blueprint/aiq-frontend:2.2.1}
++    image: nvcr.io/nvidia/blueprint/aiq-frontend:2.2.1
+     build:
+@@ -91,3 +96,3 @@
+       dockerfile: deploy/Dockerfile
+-    container_name: aiq-blueprint-ui
++    container_name: ${LAB_ID:?prepare a etapa 3}-frontend
+     environment:
+@@ -100,5 +105,5 @@
+     ports:
+-      - "${FRONTEND_PORT:-3000}:3000"
++      - "127.0.0.1:${AIQ_UI_PORT:-13000}:3000"
+     networks:
+-      - aiq-network
++      - default
+     depends_on:
+@@ -117,9 +122,8 @@
+     image: postgres:16-alpine
+-    container_name: aiq-postgres
++    container_name: ${LAB_ID:?prepare a etapa 3}-postgres
+     environment:
+       POSTGRES_USER: aiq
+-      POSTGRES_PASSWORD: aiq_dev
++      POSTGRES_PASSWORD: ${LAB_DB_PASSWORD:?use a senha do lab}
+       POSTGRES_DB: aiq_jobs
+-    ports:
+-      - "5432:5432"
++    ports: []
+     volumes:
+@@ -128,3 +132,3 @@
+     networks:
+-      - aiq-network
++      - default
+     stdin_open: true
+@@ -148,7 +152,13 @@
+   aiq-data:
++    name: ${LAB_ID:?prepare a etapa 3}-aiq-data
+     driver: local
+   postgres-data:
++    name: ${LAB_ID:?prepare a etapa 3}-postgres-data
+     driver: local
+ networks:
+-  aiq-network:
++  default:
++    name: ${LAB_ID:?prepare a etapa 3}-private
+     driver: bridge
++  rag:
++    external: true
++    name: ${LAB_ID:?prepare a etapa 3}-rag
+--- a/configs/config_web_frag.yml
++++ b/configs/config_web_frag.yml
+@@ -53,4 +53,4 @@
+     _type: nim
+-    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
+-    base_url: "https://integrate.api.nvidia.com/v1"
++    model_name: ${LOCAL_LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
++    base_url: ${LOCAL_LLM_URL:-http://nim-llm:8000/v1}
+     api_key: ${NVIDIA_API_KEY}
+@@ -68,4 +68,4 @@
+     _type: nim
+-    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
+-    base_url: "https://integrate.api.nvidia.com/v1"
++    model_name: ${LOCAL_LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
++    base_url: ${LOCAL_LLM_URL:-http://nim-llm:8000/v1}
+     api_key: ${NVIDIA_API_KEY}
+@@ -73,3 +73,3 @@
+     top_p: 0.7
+-    max_tokens: 32768
++    max_tokens: 8192
+     num_retries: 5
+@@ -81,4 +81,4 @@
+     _type: nim
+-    model_name: nvidia/nemotron-3-ultra-550b-a55b
+-    base_url: "https://integrate.api.nvidia.com/v1"
++    model_name: ${LOCAL_LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
++    base_url: ${LOCAL_LLM_URL:-http://nim-llm:8000/v1}
+     api_key: ${NVIDIA_API_KEY}
+@@ -86,3 +86,3 @@
+     top_p: 0.7
+-    max_tokens: 16384
++    max_tokens: 8192
+     num_retries: 5
+@@ -93,4 +93,4 @@
+     _type: nim
+-    model_name: nvidia/nemotron-3-ultra-550b-a55b
+-    base_url: "https://integrate.api.nvidia.com/v1"
++    model_name: ${LOCAL_LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
++    base_url: ${LOCAL_LLM_URL:-http://nim-llm:8000/v1}
+     api_key: ${NVIDIA_API_KEY}
+@@ -98,3 +98,3 @@
+     top_p: 0.7
+-    max_tokens: 32768
++    max_tokens: 8192
+     num_retries: 5

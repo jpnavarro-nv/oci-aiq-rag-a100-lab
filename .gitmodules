@@ -1,0 +1,6 @@
+[submodule "upstream/aiq"]
+	path = upstream/aiq
+	url = https://github.com/NVIDIA-AI-Blueprints/deep-researcher-agent.git
+[submodule "upstream/rag"]
+	path = upstream/rag
+	url = https://github.com/NVIDIA-AI-Blueprints/rag.git

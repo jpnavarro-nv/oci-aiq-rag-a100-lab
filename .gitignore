@@ -1,0 +1,9 @@
+.venv/
+.venv-test/
+.venv-nvidia/
+.local/
+config/lab.env
+config/secrets.env
+__pycache__/
+*.pyc
+.DS_Store

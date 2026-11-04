@@ -1,0 +1,9 @@
+* text=auto
+*.sh text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.sha256 text eol=lf
+*.env.example text eol=lf
+# Patches preservam inclusive contexto em branco da fonte oficial.
+*.patch text eol=lf whitespace=-blank-at-eol

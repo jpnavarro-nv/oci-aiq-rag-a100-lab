@@ -1,0 +1,531 @@
+--- a/deploy/compose/nims.yaml
++++ b/deploy/compose/nims.yaml
+@@ -2,3 +2,3 @@
+   nim-llm:
+-    container_name: nim-llm-ms
++    container_name: ${LAB_ID:?prepare a etapa 3}-rag-nim-llm
+     image: nvcr.io/nim/nvidia/nemotron-3-super-120b-a12b:2.0.9
+@@ -6,7 +6,6 @@
+     volumes:
+-    - ${MODEL_DIRECTORY:-./}:/opt/nim/.cache
+-    # TODO: Change user to "${USERID}" when fix is available in the image.
+-    user: "0"
+-    ports:
+-    - "8999:8000"
++      - ${LAB_ROOT:?export LAB_ROOT}/.local/cache/llm:/opt/nim/.cache
++    user: "${USERID:?export USERID}:0"
++    ports:
++      - "127.0.0.1:${LLM_PORT:-18999}:8000"
+     expose:
+@@ -18,2 +17,5 @@
+       VLLM_USE_FLASHINFER_MOE_FP8: "0"
++      NIM_MODEL_PROFILE: ${LLM_PROFILE:?preencha o perfil BF16 TP4}
++      NIM_SERVED_MODEL_NAME: ${LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
++      NIM_PASSTHROUGH_ARGS: "--max-num-seqs 8 --max-model-len ${LLM_CONTEXT:-32768} --enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser nemotron_v3"
+     ulimits:
+@@ -28,11 +30,11 @@
+               #count: ${INFERENCE_GPU_COUNT:-all}
+-              device_ids: ['${LLM_MS_GPU_ID:-1}', '${LLM_MS_GPU_ID2:-2}']
+-              capabilities: [gpu]
+-    healthcheck:
+-      test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8000/v1/health/ready')"]
+-      interval: 10s
+-      timeout: 20s
+-      retries: 100
+-    profiles: ["", "rag"]
+-
++              device_ids: ['${LLM_GPU_0:-0}', '${LLM_GPU_1:-1}', '${LLM_GPU_2:-2}', '${LLM_GPU_3:-3}']
++              capabilities: [gpu]
++    healthcheck:
++      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health/ready', timeout=10).read()"]
++      interval: 30s
++      timeout: 15s
++      retries: 120
++      start_period: 30s
++    profiles: ["lab2"]
+   nemotron-embedding-ms:
+@@ -68,8 +70,7 @@
+   nemotron-vlm-embedding-ms:
+-    container_name: nemotron-vlm-embedding-ms
++    container_name: ${LAB_ID:?prepare a etapa 3}-rag-nemotron-vlm-embedding-ms
+     image: nvcr.io/nim/nvidia/llama-nemotron-embed-vl-1b-v2:1.12.0
+     volumes:
+-    - ${MODEL_DIRECTORY:-./}:/opt/nim/.cache
+-    ports:
+-    - "9081:8000"
++      - ${LAB_ROOT:?export LAB_ROOT}/.local/cache/nemotron-vlm-embedding-ms:/opt/nim/.cache
++    ports: []
+     expose:
+@@ -79,3 +80,3 @@
+       NIM_TRT_ENGINE_HOST_CODE_ALLOWED: 1
+-    user: "${USERID}"
++    user: "${USERID:?export USERID}:0"
+     shm_size: 16GB
+@@ -87,29 +88,28 @@
+               # count: ${INFERENCE_GPU_COUNT:-all}
+-              device_ids: ['${VLM_EMBEDDING_MS_GPU_ID:-0}']
+-              capabilities: [gpu]
+-    healthcheck:
+-      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health/ready"]
+-      interval: 30s
+-      timeout: 20s
+-      retries: 3
+-      start_period: 10m
+-    profiles: ["", "rag", "ingest", "vlm-embed", "vlm-rag", "vlm-generation"]
+-
++              device_ids: ['${EMBEDDING_GPU:-4}']
++              capabilities: [gpu]
++    healthcheck:
++      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health/ready', timeout=10).read()"]
++      interval: 30s
++      timeout: 15s
++      retries: 120
++      start_period: 30s
++    profiles: ["lab2"]
+   nemotron-ranking-ms:
+-    container_name: nemotron-ranking-ms
++    container_name: ${LAB_ID:?prepare a etapa 3}-rag-nemotron-ranking-ms
+     image: nvcr.io/nim/nvidia/llama-nemotron-rerank-1b-v2:1.10.0
+     volumes:
+-    - ${MODEL_DIRECTORY:-./}:/opt/nim/.cache
+-    ports:
+-    - "1976:8000"
+-    expose:
+-    - "8000"
+-    environment:
+-      NGC_API_KEY: ${NGC_API_KEY}
+-    user: "${USERID}"
+-    healthcheck:
+-      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health/ready"]
+-      interval: 10s
+-      timeout: 20s
+-      retries: 100
++      - ${LAB_ROOT:?export LAB_ROOT}/.local/cache/nemotron-ranking-ms:/opt/nim/.cache
++    ports: []
++    expose:
++    - "8000"
++    environment:
++      NGC_API_KEY: ${NGC_API_KEY}
++    user: "${USERID:?export USERID}:0"
++    healthcheck:
++      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health/ready', timeout=10).read()"]
++      interval: 30s
++      timeout: 15s
++      retries: 120
++      start_period: 30s
+     shm_size: 16GB
+@@ -121,6 +121,5 @@
+               # count: ${INFERENCE_GPU_COUNT:-all}
+-              device_ids: ['${RANKING_MS_GPU_ID:-0}']
+-              capabilities: [gpu]
+-    profiles: ["", "rag", "vlm-generation"]
+-
++              device_ids: ['${RERANKING_GPU:-5}']
++              capabilities: [gpu]
++    profiles: ["lab2"]
+   nemotron-ranking-vl-ms:
+@@ -155,8 +154,12 @@
+   page-elements:
++    healthcheck:
++      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health/ready', timeout=10).read()"]
++      interval: 30s
++      timeout: 15s
++      retries: 120
++      start_period: 30s
++    container_name: ${LAB_ID:?prepare a etapa 3}-rag-page-elements
+     image: ${YOLOX_IMAGE:-nvcr.io/nim/nvidia/nemotron-page-elements-v3}:${YOLOX_TAG:-1.8.0}
+     shm_size: 16gb
+-    ports:
+-      - "8000:8000"
+-      - "8001:8001"
+-      - "8002:8002"
++    ports: []
+     user: root
+@@ -185,13 +188,16 @@
+             - driver: nvidia
+-              device_ids: ['${YOLOX_MS_GPU_ID:-0}']
+-              capabilities: [gpu]
+-    profiles: ["", "ingest"]
+-
++              device_ids: ['${INGEST_GPU:-7}']
++              capabilities: [gpu]
++    profiles: ["lab2"]
+   graphic-elements:
++    healthcheck:
++      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health/ready', timeout=10).read()"]
++      interval: 30s
++      timeout: 15s
++      retries: 120
++      start_period: 30s
++    container_name: ${LAB_ID:?prepare a etapa 3}-rag-graphic-elements
+     image: ${YOLOX_GRAPHIC_ELEMENTS_IMAGE:-nvcr.io/nim/nvidia/nemotron-graphic-elements-v1}:${YOLOX_GRAPHIC_ELEMENTS_TAG:-1.8.0}
+     shm_size: 16gb
+-    ports:
+-      - "8003:8000"
+-      - "8004:8001"
+-      - "8005:8002"
++    ports: []
+     user: root
+@@ -210,13 +216,16 @@
+             - driver: nvidia
+-              device_ids: ['${YOLOX_GRAPHICS_MS_GPU_ID:-0}']
+-              capabilities: [gpu]
+-    profiles: ["", "ingest"]
+-
++              device_ids: ['${INGEST_GPU:-7}']
++              capabilities: [gpu]
++    profiles: ["lab2"]
+   table-structure:
++    healthcheck:
++      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health/ready', timeout=10).read()"]
++      interval: 30s
++      timeout: 15s
++      retries: 120
++      start_period: 30s
++    container_name: ${LAB_ID:?prepare a etapa 3}-rag-table-structure
+     image: ${YOLOX_TABLE_STRUCTURE_IMAGE:-nvcr.io/nim/nvidia/nemotron-table-structure-v1}:${YOLOX_TABLE_STRUCTURE_TAG:-1.8.0}
+     shm_size: 16gb
+-    ports:
+-      - "8006:8000"
+-      - "8007:8001"
+-      - "8008:8002"
++    ports: []
+     user: root
+@@ -235,6 +244,5 @@
+             - driver: nvidia
+-              device_ids:  ['${YOLOX_TABLE_MS_GPU_ID:-0}']
+-              capabilities: [gpu]
+-    profiles: ["", "ingest"]
+-
++              device_ids: ['${INGEST_GPU:-7}']
++              capabilities: [gpu]
++    profiles: ["lab2"]
+   paddle:
+@@ -265,8 +273,12 @@
+   nemotron-ocr:
++    healthcheck:
++      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health/ready', timeout=10).read()"]
++      interval: 30s
++      timeout: 15s
++      retries: 120
++      start_period: 30s
++    container_name: ${LAB_ID:?prepare a etapa 3}-rag-nemotron-ocr
+     image: ${NEMOTRON_OCR_IMAGE:-nvcr.io/nim/nvidia/nemotron-ocr-v1}:${NEMOTRON_OCR_TAG:-1.3.0}
+     shm_size: 16gb
+-    ports:
+-      - "8012:8000"
+-      - "8013:8001"
+-      - "8014:8002"
++    ports: []
+     user: root
+@@ -283,7 +295,5 @@
+             - driver: nvidia
+-              device_ids: ["${OCR_MS_GPU_ID:-${PADDLE_MS_GPU_ID:-0}}"]
+-              capabilities: [gpu]
+-    profiles: ["", "ingest"]
+-
+-  # Optional NIM microservices
++              device_ids: ['${INGEST_GPU:-7}']
++              capabilities: [gpu]
++    profiles: ["lab2"]
+   nemotron-parse:
+@@ -396,2 +406,2 @@
+   default:
+-    name: nvidia-rag
++    name: ${LAB_ID:?prepare a etapa 3}-rag
+--- a/deploy/compose/vectordb.yaml
++++ b/deploy/compose/vectordb.yaml
+@@ -64,3 +64,3 @@
+   seaweedfs:
+-    container_name: seaweedfs
++    container_name: ${LAB_ID:?prepare a etapa 3}-rag-seaweedfs
+     image: chrislusf/seaweedfs:3.73
+@@ -69,5 +69,3 @@
+       MINIO_SECRET_KEY: ${OBJECTSTORE_SECRETKEY:-seaweedfsadmin}
+-    ports:
+-      - "9011:9011"
+-      - "9010:9010"
++    ports: []
+     volumes:
+@@ -87,9 +85,7 @@
+       retries: 3
+-    profiles: ["", "milvus", "elasticsearch", "seaweedfs"]
+-
++    profiles: ["lab2"]
+   elasticsearch:
+-    container_name: elasticsearch
++    container_name: ${LAB_ID:?prepare a etapa 3}-rag-elasticsearch
+     image: "docker.elastic.co/elasticsearch/elasticsearch:9.3.0"
+-    ports:
+-      - 9200:9200
++    ports: []
+     volumes:
+@@ -126,19 +122,12 @@
+     #           device_ids: ['${VECTORSTORE_GPU_DEVICE_ID:-0}']
+-    profiles: ["", "elasticsearch"]
+-
+-# Per-service named Docker volumes — one per persisted data dir, all sharing the
+-# `rag-vol-` prefix so they group cleanly under `docker volume ls --filter name=rag-vol-`.
+-# These replace the legacy `deploy/compose/volumes/` host directory tree. Docker
+-# auto-creates each volume on first `docker compose up`, so no host setup is needed.
+-# See docs/troubleshooting.md ("Manage Persistent Data Volumes") for inspection,
+-# backup, reset, and migration commands.
++    profiles: ["lab2"]
+ volumes:
+   rag-vol-milvus:
+-    name: rag-vol-milvus
++    name: ${LAB_ID:?prepare a etapa 3}-rag-vol-milvus
+   rag-vol-etcd:
+-    name: rag-vol-etcd
++    name: ${LAB_ID:?prepare a etapa 3}-rag-vol-etcd
+   rag-vol-seaweedfs:
+-    name: rag-vol-seaweedfs
++    name: ${LAB_ID:?prepare a etapa 3}-rag-vol-seaweedfs
+   rag-vol-elasticsearch:
+-    name: rag-vol-elasticsearch
++    name: ${LAB_ID:?prepare a etapa 3}-rag-vol-elasticsearch
+ 
+@@ -146,2 +135,2 @@
+   default:
+-    name: nvidia-rag
++    name: ${LAB_ID:?prepare a etapa 3}-rag
+--- a/deploy/compose/docker-compose-ingestor-server.yaml
++++ b/deploy/compose/docker-compose-ingestor-server.yaml
+@@ -4,4 +4,4 @@
+   ingestor-server:
+-    container_name: ingestor-server
+-    image: nvcr.io/nvidia/blueprint/ingestor-server:${TAG:-2.6.0}
++    container_name: ${LAB_ID:?prepare a etapa 3}-rag-ingestor-server
++    image: nvcr.io/nvidia/blueprint/ingestor-server:2.6.0
+     build:
+@@ -17,3 +17,3 @@
+       # Mount the prompt.yaml file to the container, path should be absolute
+-      - ${PROMPT_CONFIG_FILE}:${PROMPT_CONFIG_FILE}
++      - ${LAB_ROOT:?export LAB_ROOT}/upstream/rag/src/nvidia_rag/rag_server/prompt.yaml:/prompt.yaml:ro
+       # Persistent data — `rag-vol-ingestor` for ingestor-server scratch/results,
+@@ -30,3 +30,3 @@
+       # Absolute path to custom prompt.yaml file
+-      PROMPT_CONFIG_FILE: ${PROMPT_CONFIG_FILE:-/prompt.yaml}
++      PROMPT_CONFIG_FILE: /prompt.yaml
+ 
+@@ -38,3 +38,3 @@
+       # You can also provide your custom value (e.g., "your_custom_vdb") when you register it in `_get_vdb_op`.
+-      APP_VECTORSTORE_NAME: ${APP_VECTORSTORE_NAME:-"elasticsearch"}
++      APP_VECTORSTORE_NAME: elasticsearch
+       
+@@ -50,5 +50,5 @@
+       # Enable GPU index building. Applies to both Milvus and Elasticsearch (requires GPU-capable image and license for ES).
+-      APP_VECTORSTORE_ENABLEGPUINDEX: ${APP_VECTORSTORE_ENABLEGPUINDEX:-False}
++      APP_VECTORSTORE_ENABLEGPUINDEX: "False"
+       # Enable GPU search. Milvus only — GPU search is not supported by Elasticsearch.
+-      APP_VECTORSTORE_ENABLEGPUSEARCH: ${APP_VECTORSTORE_ENABLEGPUSEARCH:-False}
++      APP_VECTORSTORE_ENABLEGPUSEARCH: "False"
+       # Username for vector store
+@@ -80,3 +80,3 @@
+       # url on which embedding model is hosted. If "", Nvidia hosted API is used
+-      APP_EMBEDDINGS_SERVERURL: ${APP_EMBEDDINGS_SERVERURL-"nemotron-vlm-embedding-ms:8000/v1"}
++      APP_EMBEDDINGS_SERVERURL: nemotron-vlm-embedding-ms:8000/v1
+       APP_EMBEDDINGS_MODELNAME: ${APP_EMBEDDINGS_MODELNAME:-nvidia/llama-nemotron-embed-vl-1b-v2}
+@@ -92,8 +92,8 @@
+       ##===NV-Ingest Extract Configurations==========
+-      APP_NVINGEST_EXTRACTTEXT: ${APP_NVINGEST_EXTRACTTEXT:-True}
+-      APP_NVINGEST_EXTRACTINFOGRAPHICS: ${APP_NVINGEST_EXTRACTINFOGRAPHICS:-False}
+-      APP_NVINGEST_EXTRACTTABLES: ${APP_NVINGEST_EXTRACTTABLES:-True}
+-      APP_NVINGEST_EXTRACTCHARTS: ${APP_NVINGEST_EXTRACTCHARTS:-True}
+-      APP_NVINGEST_EXTRACTIMAGES: ${APP_NVINGEST_EXTRACTIMAGES:-False}
+-      APP_NVINGEST_EXTRACTPAGEASIMAGE: ${APP_NVINGEST_EXTRACTPAGEASIMAGE:-False}
++      APP_NVINGEST_EXTRACTTEXT: "True"
++      APP_NVINGEST_EXTRACTINFOGRAPHICS: "False"
++      APP_NVINGEST_EXTRACTTABLES: "False"
++      APP_NVINGEST_EXTRACTCHARTS: "False"
++      APP_NVINGEST_EXTRACTIMAGES: "False"
++      APP_NVINGEST_EXTRACTPAGEASIMAGE: "False"
+       APP_NVINGEST_STRUCTURED_ELEMENTS_MODALITY: ${APP_NVINGEST_STRUCTURED_ELEMENTS_MODALITY:-""} # Select from "image", "text_image"
+@@ -136,4 +136,4 @@
+       # Choose the summary model to use for document summary
+-      SUMMARY_LLM: ${SUMMARY_LLM:-nvidia/nemotron-3-super-120b-a12b}
+-      SUMMARY_LLM_SERVERURL: ${SUMMARY_LLM_SERVERURL-${APP_LLM_SERVERURL-"nim-llm:8000"}}
++      SUMMARY_LLM: ${LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
++      SUMMARY_LLM_SERVERURL: nim-llm:8000
+       SUMMARY_LLM_MAX_CHUNK_LENGTH: ${SUMMARY_LLM_MAX_CHUNK_LENGTH:-9000}
+@@ -142,3 +142,3 @@
+       SUMMARY_LLM_TOP_P: ${SUMMARY_LLM_TOP_P:-1.0}
+-      SUMMARY_MAX_PARALLELIZATION: ${SUMMARY_MAX_PARALLELIZATION:-20}
++      SUMMARY_MAX_PARALLELIZATION: "2"
+       # Log level for server, supported level NOTSET, DEBUG, INFO, WARN, ERROR, CRITICAL
+@@ -156,4 +156,4 @@
+       # NV-Ingest Batch Mode Configurations
+-      NV_INGEST_FILES_PER_BATCH: ${NV_INGEST_FILES_PER_BATCH:-16}
+-      NV_INGEST_CONCURRENT_BATCHES: ${NV_INGEST_CONCURRENT_BATCHES:-4}
++      NV_INGEST_FILES_PER_BATCH: "4"
++      NV_INGEST_CONCURRENT_BATCHES: "1"
+       ENABLE_NV_INGEST_DYNAMIC_BATCHING: ${ENABLE_NV_INGEST_DYNAMIC_BATCHING:-True}
+@@ -169,4 +169,15 @@
+ 
++      APP_LLM_MODELNAME: ${LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
++      APP_LLM_SERVERURL: nim-llm:8000
++      APP_QUERYREWRITER_MODELNAME: ${LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
++      APP_QUERYREWRITER_SERVERURL: nim-llm:8000
++      APP_FILTEREXPRESSIONGENERATOR_MODELNAME: ${LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
++      APP_FILTEREXPRESSIONGENERATOR_SERVERURL: nim-llm:8000
++      REFLECTION_LLM: ${LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
++      REFLECTION_LLM_SERVERURL: nim-llm:8000
++      APP_RANKING_SERVERURL: nemotron-ranking-ms:8000
++      LLM_MAX_TOKENS: ${LLM_OUTPUT_TOKENS:-8192}
++      AGENTIC_CONTEXT_MAX_TOKENS: "16000"
+     ports:
+-      - "8082:8082"
++      - "127.0.0.1:${INGEST_PORT:-18082}:8082"
+     expose:
+@@ -176,7 +187,7 @@
+   redis:
++    container_name: ${LAB_ID:?prepare a etapa 3}-rag-redis
+     image: "redis/redis-stack:7.2.0-v18"
+-    ports:
+-      - "6379:6379"
+-
++    ports: []
+   nv-ingest-ms-runtime:
++    container_name: ${LAB_ID:?prepare a etapa 3}-rag-nv-ingest-ms-runtime
+     image: nvcr.io/nvidia/nemo-microservices/nv-ingest:26.3.0
+@@ -185,10 +196,4 @@
+     volumes:
+-      - ${DATASET_ROOT:-./data}:/workspace/data
+-    ports:
+-      # HTTP API
+-      - "7670:7670"
+-      # Simple Broker
+-      - "7671:7671"
+-      # Ray dashboard
+-      - "8265:8265"
++      - ${LAB_ROOT:?export LAB_ROOT}/.local/datasets:/workspace/data:ro
++    ports: []
+     cap_add:
+@@ -278,5 +283,5 @@
+   rag-vol-ingestor:
+-    name: rag-vol-ingestor
++    name: ${LAB_ID:?prepare a etapa 3}-rag-vol-ingestor
+   rag-vol-lancedb:
+-    name: rag-vol-lancedb
++    name: ${LAB_ID:?prepare a etapa 3}-rag-vol-lancedb
+ 
+@@ -284,2 +289,2 @@
+   default:
+-    name: nvidia-rag
++    name: ${LAB_ID:?prepare a etapa 3}-rag
+--- a/deploy/compose/docker-compose-rag-server.yaml
++++ b/deploy/compose/docker-compose-rag-server.yaml
+@@ -4,4 +4,4 @@
+   rag-server:
+-    container_name: rag-server
+-    image: nvcr.io/nvidia/blueprint/rag-server:${TAG:-2.6.0}
++    container_name: ${LAB_ID:?prepare a etapa 3}-rag-rag-server
++    image: nvcr.io/nvidia/blueprint/rag-server:2.6.0
+     build:
+@@ -16,3 +16,3 @@
+       # Mount the prompt.yaml file to the container, path should be absolute
+-      - ${PROMPT_CONFIG_FILE}:${PROMPT_CONFIG_FILE}
++      - ${LAB_ROOT:?export LAB_ROOT}/upstream/rag/src/nvidia_rag/rag_server/prompt.yaml:/prompt.yaml:ro
+       # LanceDB data is shared with the ingestor-server via the `rag-vol-lancedb`
+@@ -26,3 +26,3 @@
+       # Absolute path to custom prompt.yaml file
+-      PROMPT_CONFIG_FILE: ${PROMPT_CONFIG_FILE:-/prompt.yaml}
++      PROMPT_CONFIG_FILE: /prompt.yaml
+ 
+@@ -39,3 +39,3 @@
+       # You can also provide your custom value (e.g., "your_custom_vdb") when you register it in `_get_vdb_op`.
+-      APP_VECTORSTORE_NAME: ${APP_VECTORSTORE_NAME:-"elasticsearch"}
++      APP_VECTORSTORE_NAME: elasticsearch
+       # Type of index to be used for vectorstore
+@@ -53,3 +53,3 @@
+       # Enable GPU search. Milvus only — GPU search is not supported by Elasticsearch.
+-      APP_VECTORSTORE_ENABLEGPUSEARCH: ${APP_VECTORSTORE_ENABLEGPUSEARCH:-False}
++      APP_VECTORSTORE_ENABLEGPUSEARCH: "False"
+       # ef: Parameter controlling query time/accuracy trade-off. Higher ef leads to more accurate but slower search.
+@@ -72,7 +72,7 @@
+       ##===LLM Model specific configurations===
+-      APP_LLM_MODELNAME: ${APP_LLM_MODELNAME:-"nvidia/nemotron-3-super-120b-a12b"}
++      APP_LLM_MODELNAME: ${LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
+       # url on which llm model is hosted. If "", Nvidia hosted API is used
+-      APP_LLM_SERVERURL: ${APP_LLM_SERVERURL-"nim-llm:8000"}
++      APP_LLM_SERVERURL: nim-llm:8000
+       # LLM model parameters
+-      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-16256}
++      LLM_MAX_TOKENS: ${LLM_OUTPUT_TOKENS:-8192}
+       LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0}
+@@ -86,10 +86,10 @@
+       ##===Query Rewriter Model specific configurations===
+-      APP_QUERYREWRITER_MODELNAME: ${APP_QUERYREWRITER_MODELNAME:-"nvidia/nemotron-3-super-120b-a12b"}
++      APP_QUERYREWRITER_MODELNAME: ${LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
+       # url on which query rewriter model is hosted. If "", Nvidia hosted API is used
+-      APP_QUERYREWRITER_SERVERURL: ${APP_QUERYREWRITER_SERVERURL-"nim-llm:8000"}
++      APP_QUERYREWRITER_SERVERURL: nim-llm:8000
+ 
+       ##===Filter Expression Generator Model specific configurations===
+-      APP_FILTEREXPRESSIONGENERATOR_MODELNAME: ${APP_FILTEREXPRESSIONGENERATOR_MODELNAME:-"nvidia/nemotron-3-super-120b-a12b"}
++      APP_FILTEREXPRESSIONGENERATOR_MODELNAME: ${LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
+       # url on which filter expression generator model is hosted. If "", Nvidia hosted API is used
+-      APP_FILTEREXPRESSIONGENERATOR_SERVERURL: ${APP_FILTEREXPRESSIONGENERATOR_SERVERURL-"nim-llm:8000"}
++      APP_FILTEREXPRESSIONGENERATOR_SERVERURL: nim-llm:8000
+       # enable filter expression generator for natural language to filter expression conversion
+@@ -99,3 +99,3 @@
+       # url on which embedding model is hosted. If "", Nvidia hosted API is used
+-      APP_EMBEDDINGS_SERVERURL: ${APP_EMBEDDINGS_SERVERURL-"nemotron-vlm-embedding-ms:8000/v1"}
++      APP_EMBEDDINGS_SERVERURL: nemotron-vlm-embedding-ms:8000/v1
+       APP_EMBEDDINGS_MODELNAME: ${APP_EMBEDDINGS_MODELNAME:-nvidia/llama-nemotron-embed-vl-1b-v2}
+@@ -107,3 +107,3 @@
+       # url on which ranking model is hosted. If "", Nvidia hosted API is used
+-      APP_RANKING_SERVERURL: ${APP_RANKING_SERVERURL-"nemotron-ranking-ms:8000"}
++      APP_RANKING_SERVERURL: nemotron-ranking-ms:8000
+       APP_RANKING_MODELNAME: ${APP_RANKING_MODELNAME:-"nvidia/llama-nemotron-rerank-1b-v2"}
+@@ -208,5 +208,5 @@
+       # reflection llm
+-      REFLECTION_LLM: ${REFLECTION_LLM:-"nvidia/nemotron-3-super-120b-a12b"}
++      REFLECTION_LLM: ${LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
+       # reflection llm server url. If "", Nvidia hosted API is used
+-      REFLECTION_LLM_SERVERURL: ${REFLECTION_LLM_SERVERURL-"nim-llm:8000"}
++      REFLECTION_LLM_SERVERURL: nim-llm:8000
+       # enable iterative query decomposition
+@@ -251,6 +251,18 @@
+       # Context window budget for retrieved chunks
+-      AGENTIC_CONTEXT_MAX_TOKENS: ${AGENTIC_CONTEXT_MAX_TOKENS:-100000}
+-
++      AGENTIC_CONTEXT_MAX_TOKENS: "16000"
++
++      SUMMARY_LLM: ${LLM_MODEL:-nvidia/nemotron-3-super-120b-a12b}
++      SUMMARY_LLM_SERVERURL: nim-llm:8000
++      APP_VECTORSTORE_ENABLEGPUINDEX: "False"
++      APP_NVINGEST_EXTRACTTEXT: "True"
++      APP_NVINGEST_EXTRACTTABLES: "False"
++      APP_NVINGEST_EXTRACTCHARTS: "False"
++      APP_NVINGEST_EXTRACTIMAGES: "False"
++      APP_NVINGEST_EXTRACTINFOGRAPHICS: "False"
++      APP_NVINGEST_EXTRACTPAGEASIMAGE: "False"
++      SUMMARY_MAX_PARALLELIZATION: "2"
++      NV_INGEST_FILES_PER_BATCH: "4"
++      NV_INGEST_CONCURRENT_BATCHES: "1"
+     ports:
+-      - "8081:8081"
++      - "127.0.0.1:${RAG_PORT:-18081}:8081"
+     expose:
+@@ -261,4 +273,4 @@
+   rag-frontend:
+-    container_name: rag-frontend
+-    image: nvcr.io/nvidia/blueprint/rag-frontend:${TAG:-2.6.0}
++    container_name: ${LAB_ID:?prepare a etapa 3}-rag-rag-frontend
++    image: nvcr.io/nvidia/blueprint/rag-frontend:2.6.0
+     build:
+@@ -273,3 +285,3 @@
+     ports:
+-      - "8090:3000"
++      - "127.0.0.1:${RAG_UI_PORT:-19090}:3000"
+     expose:
+@@ -288,3 +300,3 @@
+   rag-vol-lancedb:
+-    name: rag-vol-lancedb
++    name: ${LAB_ID:?prepare a etapa 3}-rag-vol-lancedb
+ 
+@@ -292,2 +304,2 @@
+   default:
+-    name: nvidia-rag
++    name: ${LAB_ID:?prepare a etapa 3}-rag

@@ -1,0 +1,16 @@
+{
+  "reviewed_at": "2026-10-30",
+  "aiq": {
+    "url": "https://github.com/NVIDIA-AI-Blueprints/deep-researcher-agent.git",
+    "tag": "v2.2.1",
+    "commit": "6ec77d91cc5f3ba790729bb8bdc8189a821a61d3"
+  },
+  "rag": {
+    "url": "https://github.com/NVIDIA-AI-Blueprints/rag.git",
+    "tag": "v2.6.2",
+    "commit": "f20716d73ae69a544ad4a692f38d6178a64e6f36"
+  },
+  "llm_image": "nvcr.io/nim/nvidia/nemotron-3-super-120b-a12b:2.0.9",
+  "rag_application_image_tag": "2.6.0",
+  "note": "RAG 2.6.2 changes configuration/documentation; upstream retains application images 2.6.0. NIMs retain their upstream versions. Runtime image digests are recorded after pull."
+}
