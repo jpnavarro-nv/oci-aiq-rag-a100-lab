@@ -237,7 +237,7 @@ Crie as pastas de documentos e relatórios.
 mkdir -p .local/datasets .local/reports
 ```
 
-Esta preparação é para um clone novo. Se `config/lab.env` já foi preenchido, retome pela etapa **17.2** e não gere outro `LAB_ID`. Copie os exemplos, um comando por vez. Se o `cp -i` pedir confirmação de sobrescrita, responda `n` e siga a retomada, sem continuar os blocos de instalação abaixo. `umask 077` protege os novos arquivos.
+Crie os arquivos de configuração a partir dos exemplos, executando um bloco por vez. `umask 077` restringe o acesso aos novos arquivos ao seu usuário.
 
 ```bash
 cp -i config/lab.env.example config/lab.env
