@@ -31,7 +31,3 @@ As configurações preenchidas, chaves, caches, documentos e relatórios locais 
 
 Cada instalação recebe um `LAB_ID` próprio, usado nos nomes de projetos, contêineres, redes e volumes Docker. Os caches dos modelos ficam dentro do clone e são gravados com o UID do usuário. Para retomar uma instalação, preserve seu `config/lab.env`; para um teste limpo, siga o LAB2 desde um clone novo e libere as portas e GPUs ocupadas pela execução anterior.
 
-## Material para apresentação
-
-- [Slide com QR code](slides/Laboratorio_OCI_NVIDIA_QR.pptx).
-- [QR code do laboratório](docs/images/lab2-qr.png).
