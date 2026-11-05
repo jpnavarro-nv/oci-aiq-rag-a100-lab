@@ -19,7 +19,7 @@ Os patches deste diretório ajustam os arquivos oficiais NVIDIA para executar AI
 
 O código das aplicações, os agentes, as ferramentas e o fluxo de pesquisa continuam os das releases NVIDIA.
 
-A etapa 19 do LAB2 oferece uma alternativa com Lightning 30B BF16 TP2. Ela carrega `config/compose.lightning.yaml` depois dos arquivos oficiais, com cache separado, sem alterar os patches-base ou os modelos de embeddings e extração. `config/lightning.env` seleciona o mesmo nome de modelo nos clientes RAG e AI-Q. A configuração original do Super 120B permanece disponível para retorno.
+A etapa 19 do LAB2 oferece uma alternativa com Lightning 30B BF16 TP2. Ela carrega `config/compose.lightning.yaml` depois dos arquivos oficiais, com cache separado, sem alterar os patches-base ou os modelos de embeddings e extração. `config/lightning.env` seleciona o mesmo nome de modelo nos clientes RAG e AI-Q. O patch adicional `aiq-v2.2.1-lightning.patch`, aplicado depois do patch-base AI-Q, define `parallel_tool_calls: false` nos dois papéis originalmente Ultra, como nos papéis Lightning do upstream. Ele modifica apenas `configs/config_web_frag.yml` e deve ser revertido para retornar à configuração original do Super 120B.
 
 ## Aplicação e manutenção
 

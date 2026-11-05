@@ -17,7 +17,9 @@
       "digest": "sha256:1d8fcf725f518f9a007dbde15ada71db56c21e72f06ddf40a894971ddc2257f4",
       "precision": "BF16",
       "tensor_parallel": 2,
-      "compose_override": "config/compose.lightning.yaml"
+      "compose_override": "config/compose.lightning.yaml",
+      "aiq_patch": "patches/aiq-v2.2.1-lightning.patch",
+      "parallel_tool_calls": false
     }
   },
   "rag_application_image_tag": "2.6.0",

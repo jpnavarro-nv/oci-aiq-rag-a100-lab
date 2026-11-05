@@ -1206,6 +1206,18 @@ Execute na raiz do clone, após aplicar os patches da etapa 6. Se retomou em out
 
 ### 19.1. Preparar o modelo
 
+Na primeira ativação desta alternativa, confira o patch adicional AI-Q. Ele desativa chamadas paralelas também nos dois papéis originalmente configurados para Ultra, alinhando-os à configuração Lightning do upstream. Os patches da etapa 6 já precisam estar aplicados.
+
+```bash
+git -C upstream/aiq apply --check "$PWD/patches/aiq-v2.2.1-lightning.patch"
+```
+
+Aplique o patch adicional uma única vez. Em uma retomada, preserve-o e apenas recarregue o ambiente.
+
+```bash
+git -C upstream/aiq apply "$PWD/patches/aiq-v2.2.1-lightning.patch"
+```
+
 Copie a configuração alternativa uma única vez.
 
 ```bash
@@ -1315,7 +1327,17 @@ Ao retomar esta alternativa em outro terminal, carregue o ambiente normal e depo
 
 ### 19.4. Voltar ao Super 120B
 
-Conclua ou cancele pesquisas em execução. Recarregue o nome original do modelo.
+Conclua ou cancele pesquisas em execução. Reverta somente o patch adicional do Lightning; mantenha os dois patches-base da etapa 6.
+
+```bash
+git -C upstream/aiq apply --reverse --check "$PWD/patches/aiq-v2.2.1-lightning.patch"
+```
+
+```bash
+git -C upstream/aiq apply --reverse "$PWD/patches/aiq-v2.2.1-lightning.patch"
+```
+
+Recarregue o nome original do modelo.
 
 ```bash
 source config/lab.env
