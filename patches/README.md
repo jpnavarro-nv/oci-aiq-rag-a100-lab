@@ -6,6 +6,8 @@ Os patches deste diretório ajustam os arquivos oficiais NVIDIA para executar AI
 | --- | --- | --- |
 | `rag-v2.6.2-oci-a100.patch` | `f20716d73ae69a544ad4a692f38d6178a64e6f36` | Quatro arquivos em `deploy/compose/`: NIMs, bancos, ingestão e RAG |
 | `aiq-v2.2.1-oci-a100.patch` | `6ec77d91cc5f3ba790729bb8bdc8189a821a61d3` | `deploy/compose/docker-compose.yaml` e `configs/config_web_frag.yml` |
+| `aiq-v2.2.1-lightning.patch` | Depois do patch-base AI-Q | Limites de saída e encerramento de ferramentas em `configs/config_web_frag.yml` |
+| `aiq-v2.2.1-planner.patch` | Depois do patch Lightning | Perfil Super local e associação de `planner_llm` no mesmo YAML |
 
 ## Configurações aplicadas
 
@@ -19,7 +21,9 @@ Os patches deste diretório ajustam os arquivos oficiais NVIDIA para executar AI
 
 O código das aplicações, os agentes, as ferramentas e o fluxo de pesquisa continuam os das releases NVIDIA.
 
-A etapa 19 do LAB2 oferece uma alternativa com Lightning 30B BF16 TP2. Ela carrega `config/compose.lightning.yaml` depois dos arquivos oficiais, com cache separado, sem alterar os patches-base ou os modelos de embeddings e extração. `config/lightning.env` seleciona o mesmo nome de modelo nos clientes RAG e AI-Q. O patch adicional `aiq-v2.2.1-lightning.patch`, aplicado depois do patch-base AI-Q, define `parallel_tool_calls: false` nos dois papéis originalmente Ultra, como nos papéis Lightning do upstream. Ele modifica apenas `configs/config_web_frag.yml` e deve ser revertido para retornar à configuração original do Super 120B.
+A etapa 19 do LAB2 oferece uma alternativa com Lightning 30B BF16 TP2. Ela carrega `config/compose.lightning.yaml` depois dos arquivos oficiais, com cache separado e contexto de 131.072 tokens. O patch adicional `aiq-v2.2.1-lightning.patch`, aplicado depois do patch-base AI-Q, restaura os limites de saída por papel, define `parallel_tool_calls: false` nos dois papéis originalmente Ultra e acrescenta `stop: ["</tool_call>"]` com `include_stop_str_in_output: true` aos três perfis Lightning com ferramentas. O marcador encerra uma chamada completa e continua disponível para o parser. Ele modifica apenas `configs/config_web_frag.yml`.
+
+A etapa 20 acrescenta Super 120B como planner e move Lightning para uma A100 na GPU 6. Carregue também `config/compose.planner.yaml` e `config/planner.env` por último. `aiq-v2.2.1-planner.patch` acrescenta um perfil NIM local e altera somente `deep_research_agent.planner_llm`. Os demais papéis continuam com Lightning. Os caches são reutilizados dentro do clone, com o UID do operador; o novo endpoint não publica porta no host. Reverta o patch do planner antes do patch Lightning para retornar à receita-base. Nenhum patch altera Python, prompts, ferramentas ou verificações de citações.
 
 ## Aplicação e manutenção
 

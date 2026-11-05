@@ -19,7 +19,29 @@
       "tensor_parallel": 2,
       "compose_override": "config/compose.lightning.yaml",
       "aiq_patch": "patches/aiq-v2.2.1-lightning.patch",
-      "parallel_tool_calls": false
+      "parallel_tool_calls": false,
+      "context": 131072,
+      "tool_call_stop": "</tool_call>",
+      "include_stop_str_in_output": true
+    },
+    "super_planner_lightning": {
+      "planner_image": "nvcr.io/nim/nvidia/nemotron-3-super-120b-a12b:2.0.9",
+      "planner_precision": "BF16",
+      "planner_tensor_parallel": 4,
+      "planner_context": 65536,
+      "worker_image": "nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b:2.0.13",
+      "worker_precision": "BF16",
+      "worker_tensor_parallel": 1,
+      "worker_context": 131072,
+      "compose_overrides": [
+        "config/compose.lightning.yaml",
+        "config/compose.planner.yaml"
+      ],
+      "aiq_patches": [
+        "patches/aiq-v2.2.1-lightning.patch",
+        "patches/aiq-v2.2.1-planner.patch"
+      ],
+      "inference": "local"
     }
   },
   "rag_application_image_tag": "2.6.0",

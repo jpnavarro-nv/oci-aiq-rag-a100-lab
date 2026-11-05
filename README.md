@@ -26,6 +26,7 @@ O mapa utiliza sete GPUs de uma instância com oito A100 SXM4 de 80 GB. A infer�
 - `config/lab.env.example`: exemplo de GPUs, perfil do modelo e portas.
 - `config/secrets.env.example`: campos das credenciais, sem valores.
 - `config/compose.lightning.yaml` e `config/lightning.env.example`: alternativa experimental com Lightning 30B em duas A100, descrita com seus resultados e limitações na etapa 19 do roteiro.
+- `config/compose.planner.yaml` e `config/planner.env.example`: configuração local Super 120B como planner e Lightning como workhorse, na etapa 20.
 - `checks/llm-chat.json`: pergunta de teste do modelo local.
 
 As configurações preenchidas, chaves, caches, documentos e relatórios locais ficam fora do Git. Siga as etapas do roteiro para criar esses arquivos no servidor.

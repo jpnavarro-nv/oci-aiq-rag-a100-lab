@@ -1,0 +1,40 @@
+# Carregue depois de compose.lightning.yaml. O planner usa o cache Super existente.
+services:
+  nim-llm:
+    environment:
+      NIM_PASSTHROUGH_ARGS: "--max-num-seqs 4 --max-model-len ${LLM_CONTEXT:-131072} --enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser nemotron_v3"
+    deploy:
+      resources:
+        reservations:
+          devices: !override
+            - driver: nvidia
+              device_ids: ['${LIGHTNING_GPU_0:-6}']
+              capabilities: [gpu]
+  nim-planner:
+    image: nvcr.io/nim/nvidia/nemotron-3-super-120b-a12b:2.0.9
+    container_name: ${LAB_ID:?carregue o ambiente}-rag-nim-planner
+    user: "${USERID:?export USERID}:0"
+    shm_size: 16GB
+    volumes:
+      - ${LAB_ROOT:?export LAB_ROOT}/.local/cache/llm:/opt/nim/.cache
+    environment:
+      NGC_API_KEY: ${NGC_API_KEY:?carregue as credenciais}
+      NIM_MODEL_PROFILE: ${LLM_PROFILE:?preencha o perfil Super BF16 TP4}
+      NIM_SERVED_MODEL_NAME: nvidia/nemotron-3-super-120b-a12b
+      NIM_ENABLE_CHUNKED_PREFILL: "1"
+      NCCL_NVLS_ENABLE: "0"
+      VLLM_USE_FLASHINFER_MOE_FP8: "0"
+      NIM_PASSTHROUGH_ARGS: "--max-num-seqs 2 --max-model-len ${PLANNER_CONTEXT:-65536} --enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser nemotron_v3"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['${LLM_GPU_0:-0}', '${LLM_GPU_1:-1}', '${LLM_GPU_2:-2}', '${LLM_GPU_3:-3}']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import json,urllib.request; r=json.load(urllib.request.urlopen('http://localhost:8000/v1/health/ready', timeout=10)); assert r.get('status') == 'ready', r"]
+      interval: 15s
+      timeout: 15s
+      retries: 120
+    profiles: [lab2]

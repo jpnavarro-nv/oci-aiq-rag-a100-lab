@@ -1208,7 +1208,7 @@ Execute na raiz do clone, após aplicar os patches da etapa 6. Se retomou em out
 
 ### 19.1. Preparar o modelo
 
-Na primeira ativação desta alternativa, confira o patch adicional AI-Q. Ele desativa chamadas paralelas também nos dois papéis originalmente configurados para Ultra, alinhando-os à configuração Lightning do upstream. Os patches da etapa 6 já precisam estar aplicados.
+Na primeira ativação desta alternativa, confira o patch adicional AI-Q. Ele restaura os limites de saída por papel (32.768 para pesquisa superficial, 16.384 para pesquisa profunda e 32.768 para escrita), desativa chamadas paralelas nos dois papéis originalmente Ultra e encerra cada chamada de ferramenta no marcador `</tool_call>`, preservando-o para o parser. Os patches da etapa 6 já precisam estar aplicados.
 
 ```bash
 git -C upstream/aiq apply --check "$PWD/patches/aiq-v2.2.1-lightning.patch"
@@ -1262,12 +1262,12 @@ source config/lightning.env
 Exporte-os para o Compose. Isso também substitui um `LLM_MODEL` que tenha sido carregado anteriormente nesta sessão.
 
 ```bash
-export LLM_MODEL LIGHTNING_PROFILE LIGHTNING_GPU_0 LIGHTNING_GPU_1
+export LLM_MODEL LLM_CONTEXT LIGHTNING_PROFILE LIGHTNING_GPU_0 LIGHTNING_GPU_1
 ```
 
 ### 19.2. Iniciar e testar a inferência
 
-Valide os arquivos oficiais com o pequeno override do Lightning carregado por último. Ele substitui a imagem, o perfil, o cache e a reserva de quatro GPUs por duas; o UID e os parsers continuam os do patch.
+Valide os arquivos oficiais com o pequeno override do Lightning carregado por último. Ele substitui a imagem, o perfil, o cache, o contexto por 131.072 tokens e a reserva de quatro GPUs por duas. O contexto comporta a entrada e a saída; o UID e os parsers continuam os do patch.
 
 ```bash
 docker compose -p "$RAG_PROJECT_NAME" --profile lab2 \
@@ -1309,7 +1309,7 @@ Atualize o agente AI-Q para usar o mesmo modelo local.
 ```bash
 docker compose -p "$AIQ_PROJECT_NAME" -f "$AIQ_COMPOSE_FILE" \
   --env-file config/lab.env --env-file config/secrets.env --env-file config/lightning.env \
-  up -d --pull missing --no-build aiq-agent
+  up -d --force-recreate --pull missing --no-build aiq-agent
 ```
 
 Confira a API após a inicialização. As tentativas abaixo cobrem o tempo de subida do backend.
@@ -1370,6 +1370,132 @@ docker compose -p "$AIQ_PROJECT_NAME" -f "$AIQ_COMPOSE_FILE" \
 ```
 
 Confira novamente `/v1/models` e a saúde do AI-Q antes de usar a interface.
+
+## 20. Planner Super 120B e workhorse Lightning locais
+
+Esta opção mantém **Super 120B no planner** e usa **Lightning nos demais papéis**, inclusive pesquisa, orquestração, escrita e RAG. Todos os modelos são executados na instância. A pesquisa web continua usando Tavily. A associação por papel é uma configuração nativa do AI-Q; os agentes e as verificações de citações permanecem originais.
+
+Este perfil concluiu um teste real com PDF e pesquisa web em A100, com relatório final e exportação PDF, em aproximadamente 4 min 50 s. Confirme o mesmo fluxo na sua instalação pela etapa 20.3. O ensaio confirmou a execução; o relatório ultrapassou o tamanho solicitado e requer revisão de conteúdo antes de compartilhar.
+
+| GPUs | Serviço |
+| --- | --- |
+| 0–3 | Super 120B BF16 TP4 — planner |
+| 4 | Embeddings |
+| 5 | Reordenação |
+| 6 | Lightning 30B BF16 TP1 — workhorse |
+| 7 | Extração |
+
+Prepare os arquivos e o patch Lightning da etapa **19.1**. A etapa abaixo substitui a inicialização da **19.2**; também pode ser executada depois da alternativa 19. Preserve `config/lab.env` e seu perfil Super BF16 TP4.
+
+### 20.1. Configurar o planner
+
+Confira o patch adicional, aplicado depois dos patches-base e Lightning.
+
+```bash
+git -C upstream/aiq apply --check "$PWD/patches/aiq-v2.2.1-planner.patch"
+```
+
+Aplique uma única vez.
+
+```bash
+git -C upstream/aiq apply "$PWD/patches/aiq-v2.2.1-planner.patch"
+```
+
+Crie a configuração desta opção.
+
+```bash
+cp -i config/planner.env.example config/planner.env
+```
+
+Com a GPU 6 livre, consulte os perfis Lightning. O cache é o mesmo da etapa 19.
+
+```bash
+docker run --rm --pull missing --user "$USERID:0" --runtime=nvidia \
+  -e NVIDIA_VISIBLE_DEVICES=6 -e NGC_API_KEY \
+  -v "$PWD/.local/cache/lightning:/opt/nim/.cache" \
+  nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b:2.0.13 list-model-profiles
+```
+
+Preencha `LIGHTNING_PROFILE` em `config/planner.env` com o identificador completo de um perfil **BF16 TP1, sem LoRA, compatível e executável**. O perfil TP2 da etapa 19 não serve para uma GPU.
+
+```bash
+nano config/planner.env
+```
+
+Carregue os valores na ordem abaixo. Se abriu outro terminal, carregue antes o ambiente da etapa 17.2 e as variáveis AI-Q da 11.1.
+
+```bash
+source config/lightning.env
+```
+
+```bash
+source config/planner.env
+```
+
+```bash
+export LLM_MODEL LLM_CONTEXT LIGHTNING_PROFILE LIGHTNING_GPU_0 PLANNER_CONTEXT
+```
+
+### 20.2. Iniciar os dois modelos
+
+Conclua ou cancele pesquisas ativas. Pare o LLM atual do laboratório para liberar as GPUs que o planner usará.
+
+```bash
+docker stop --timeout 120 "${LAB_ID}-rag-nim-llm"
+```
+
+Valide o Compose, com os dois overrides por último.
+
+```bash
+docker compose -p "$RAG_PROJECT_NAME" --profile lab2 \
+  -f "$RAG_COMPOSE_DIR/nims.yaml" -f "$RAG_COMPOSE_DIR/vectordb.yaml" \
+  -f "$RAG_COMPOSE_DIR/docker-compose-ingestor-server.yaml" \
+  -f "$RAG_COMPOSE_DIR/docker-compose-rag-server.yaml" \
+  -f config/compose.lightning.yaml -f config/compose.planner.yaml \
+  --env-file config/lab.env --env-file config/secrets.env \
+  --env-file config/lightning.env --env-file config/planner.env config --quiet
+```
+
+Inicie os modelos e atualize as APIs. O planner reutiliza o cache Super em `.local/cache/llm`; Lightning usa `.local/cache/lightning`. Ambos gravam com o UID do operador. O planner atende somente na rede Docker, em `http://nim-planner:8000/v1`.
+
+```bash
+docker compose -p "$RAG_PROJECT_NAME" --profile lab2 \
+  -f "$RAG_COMPOSE_DIR/nims.yaml" -f "$RAG_COMPOSE_DIR/vectordb.yaml" \
+  -f "$RAG_COMPOSE_DIR/docker-compose-ingestor-server.yaml" \
+  -f "$RAG_COMPOSE_DIR/docker-compose-rag-server.yaml" \
+  -f config/compose.lightning.yaml -f config/compose.planner.yaml \
+  --env-file config/lab.env --env-file config/secrets.env \
+  --env-file config/lightning.env --env-file config/planner.env \
+  up -d --pull missing --no-build --wait --wait-timeout 7200 nim-llm nim-planner rag-server ingestor-server
+```
+
+### 20.3. Reiniciar e testar o AI-Q
+
+Recrie o agente para carregar a nova associação do planner. Os volumes são preservados.
+
+```bash
+docker compose -p "$AIQ_PROJECT_NAME" -f "$AIQ_COMPOSE_FILE" \
+  --env-file config/lab.env --env-file config/secrets.env \
+  --env-file config/lightning.env --env-file config/planner.env \
+  up -d --force-recreate --pull missing --no-build aiq-agent
+```
+
+Confira a API após a inicialização.
+
+```bash
+curl -fsS --retry 30 --retry-delay 2 --retry-all-errors --retry-max-time 180 \
+  --max-time 30 http://127.0.0.1:18000/health
+```
+
+Abra uma sessão nova no AI-Q, anexe o PDF OCI e habilite **Web Search**, como na etapa 13. Solicite:
+
+> Gere um relatório executivo de até 300 palavras sobre como OCI Supercluster e NVIDIA se complementam. Use o PDF anexado e uma fonte oficial da web. Inclua citações e uma seção Sources.
+
+Confirme a disponibilidade do relatório, suas referências e a exportação. Os healthchecks confirmam prontidão dos serviços; o teste completo depende da conclusão desse fluxo.
+
+Na retomada, carregue o ambiente normal, depois `config/lightning.env` e `config/planner.env`, nessa ordem, e repita o `export` da 20.1. Use sempre os dois overrides e os quatro arquivos de ambiente nos comandos RAG. Nos comandos AI-Q, use os quatro arquivos de ambiente.
+
+Para voltar à alternativa 19, conclua ou cancele as pesquisas, pare `"${LAB_ID}-rag-nim-planner"`, reverta somente `aiq-v2.2.1-planner.patch` e execute a etapa 19 a partir do carregamento de `config/lightning.env`. Para voltar ao Super em todos os papéis, continue pela 19.4 depois dessa reversão.
 
 ## Referências
 

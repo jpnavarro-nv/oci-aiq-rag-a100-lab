@@ -5,6 +5,7 @@
 config/lab.env
 config/secrets.env
 config/lightning.env
+config/planner.env
 __pycache__/
 *.pyc
 .DS_Store

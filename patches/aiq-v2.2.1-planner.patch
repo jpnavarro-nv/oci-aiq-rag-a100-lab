@@ -1,0 +1,33 @@
+--- a/configs/config_web_frag.yml
++++ b/configs/config_web_frag.yml
+@@ -105,6 +105,21 @@
+     chat_template_kwargs:
+       enable_thinking: false
+ 
++  nemotron_super_planner_llm:
++    _type: nim
++    model_name: nvidia/nemotron-3-super-120b-a12b
++    base_url: "http://nim-planner:8000/v1"
++    api_key: ${NVIDIA_API_KEY}
++    temperature: 0.2
++    top_p: 0.7
++    max_tokens: 16384
++    num_retries: 5
++    parallel_tool_calls: false
++    stop: ["</tool_call>"]
++    include_stop_str_in_output: true
++    chat_template_kwargs:
++      enable_thinking: false
++
+ functions:
+   # =========================================================================
+   # Data Source Registry
+@@ -194,7 +209,7 @@
+     orchestrator_llm: nemotron_ultra_llm
+     source_router_llm: nemotron_ultra_llm
+     researcher_llm: nemotron_ultra_llm
+-    planner_llm: nemotron_ultra_llm
++    planner_llm: nemotron_super_planner_llm
+     writer_llm: nemotron_ultra_writer_llm
+     # tools: omitted -> inherits all from data_source_registry
+     exclude_tools:
