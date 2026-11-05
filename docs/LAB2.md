@@ -890,6 +890,8 @@ A janela anônima evita reutilizar o histórico salvo no navegador durante este 
 Na sessão preparada na etapa 13, envie a pesquisa abaixo. O escopo é curto para facilitar a demonstração:
 
 ```text
+Redija todo o relatório em português do Brasil, incluindo título e subtítulos.
+
 Usando o PDF anexado e pesquisa web em fontes oficiais Oracle e NVIDIA, explique como OCI Supercluster e NVIDIA se complementam para executar soluções de IA.
 
 Escreva um relatório curto em português, com até 600 palavras e uma tabela de três linhas: GPUs, rede e software NVIDIA. Diferencie o que vem do PDF e o que foi encontrado na web.
@@ -908,7 +910,7 @@ Acompanhe a pesquisa até o estado **Done** e a disponibilização do relatório
 Opcionalmente, envie uma mensagem curta na mesma sessão para demonstrar o refinamento:
 
 ```text
-Resuma o relatório em cinco pontos para uma apresentação sobre OCI e NVIDIA. Preserve as citações e a seção Sources.
+Resuma o relatório em português do Brasil, em cinco pontos para uma apresentação sobre OCI e NVIDIA. Preserve as citações e a seção Sources.
 ```
 
 Aguarde a conclusão e compare o conteúdo refinado com a versão anterior.
@@ -1321,7 +1323,7 @@ curl -fsS --retry 30 --retry-delay 2 --retry-all-errors --retry-max-time 180 \
 
 Abra uma nova sessão no AI-Q, anexe o PDF e habilite **Web Search**, seguindo a etapa 13. Use a mesma pergunta na comparação entre os modelos:
 
-> Gere um relatório executivo curto sobre OCI Supercluster e NVIDIA, usando o PDF anexado e fontes oficiais da web. Inclua as citações e uma seção final Sources.
+> Redija todo o relatório em português do Brasil, incluindo título e subtítulos. Explique como OCI Supercluster e NVIDIA se complementam, usando o PDF anexado e fontes oficiais da web. Inclua citações e a seção Sources; preserve os URLs e os títulos originais das referências.
 
 A validação termina quando o relatório está disponível, com citações e exportação. Uma resposta de chat ou um contêiner em execução não confirma esse resultado. Compare o tempo total e a conclusão do relatório; mantenha os limites de pesquisa e as verificações de citações.
 
@@ -1375,7 +1377,7 @@ Confira novamente `/v1/models` e a saúde do AI-Q antes de usar a interface.
 
 Esta opção mantém **Super 120B no planner** e usa **Lightning nos demais papéis**, inclusive pesquisa, orquestração, escrita e RAG. Todos os modelos são executados na instância. A pesquisa web continua usando Tavily. A associação por papel é uma configuração nativa do AI-Q; os agentes e as verificações de citações permanecem originais.
 
-Este perfil concluiu um teste real com PDF e pesquisa web em A100, com relatório final e exportação PDF, em aproximadamente 4 min 50 s. Confirme o mesmo fluxo na sua instalação pela etapa 20.3. O ensaio confirmou a execução; o relatório ultrapassou o tamanho solicitado e requer revisão de conteúdo antes de compartilhar.
+Este perfil concluiu um teste real com PDF e pesquisa web em A100, com relatório final em português do Brasil e exportação PDF, em aproximadamente 4 min 15 s. Confirme o mesmo fluxo na sua instalação pela etapa 20.3. O ensaio confirmou a execução e o idioma; revise o conteúdo antes de compartilhar.
 
 | GPUs | Serviço |
 | --- | --- |
@@ -1489,7 +1491,7 @@ curl -fsS --retry 30 --retry-delay 2 --retry-all-errors --retry-max-time 180 \
 
 Abra uma sessão nova no AI-Q, anexe o PDF OCI e habilite **Web Search**, como na etapa 13. Solicite:
 
-> Gere um relatório executivo de até 300 palavras sobre como OCI Supercluster e NVIDIA se complementam. Use o PDF anexado e uma fonte oficial da web. Inclua citações e uma seção Sources.
+> Redija todo o relatório em português do Brasil, incluindo título e subtítulos. Explique como OCI Supercluster e NVIDIA se complementam, usando o PDF anexado e fontes oficiais da web. Inclua citações e a seção Sources; preserve os URLs e os títulos originais das referências.
 
 Confirme a disponibilidade do relatório, suas referências e a exportação. Os healthchecks confirmam prontidão dos serviços; o teste completo depende da conclusão desse fluxo.
 
