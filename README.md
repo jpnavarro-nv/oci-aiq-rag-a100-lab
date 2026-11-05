@@ -25,7 +25,7 @@ O mapa utiliza sete GPUs de uma instância com oito A100 SXM4 de 80 GB. A infer�
 - `upstream/aiq` e `upstream/rag`: submódulos dos repositórios oficiais, nos commits de `versions.lock.json`.
 - `config/lab.env.example`: exemplo de GPUs, perfil do modelo e portas.
 - `config/secrets.env.example`: campos das credenciais, sem valores.
-- `config/compose.lightning.yaml` e `config/lightning.env.example`: alternativa com Lightning 30B em duas A100, descrita na etapa 19 do roteiro.
+- `config/compose.lightning.yaml` e `config/lightning.env.example`: alternativa experimental com Lightning 30B em duas A100, descrita com seus resultados e limitações na etapa 19 do roteiro.
 - `checks/llm-chat.json`: pergunta de teste do modelo local.
 
 As configurações preenchidas, chaves, caches, documentos e relatórios locais ficam fora do Git. Siga as etapas do roteiro para criar esses arquivos no servidor.

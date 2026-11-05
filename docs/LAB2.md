@@ -1202,6 +1202,8 @@ Ao compartilhar um erro, remova chaves, senhas e dados privados. Não compartilh
 
 Esta alternativa troca somente o modelo de linguagem compartilhado por RAG e AI-Q por **Nemotron 3.5 Lightning 30B-A3B, NIM 2.0.13, BF16 TP2**. Os agentes, ferramentas, bancos, embeddings e extração continuam iguais. O upstream AI-Q usa também Ultra para pesquisa profunda; executar todos os papéis com Lightning é uma adaptação deste laboratório, cuja conclusão de relatórios precisa ser validada.
 
+**Alternativa experimental.** Na validação de 05/11/2026 em duas A100 de 80 GB, passaram chat, chamadas de ferramentas e resposta RAG ao PDF com fontes. A pesquisa profunda consultou PDF e web, mas terminou sem gravar o relatório (`writer_output_not_committed`). Portanto, esta alternativa está disponível para testes de inferência e integração; a geração completa de relatórios ainda não foi aprovada. Não há ganho de tempo do relatório comprovado.
+
 Execute na raiz do clone, após aplicar os patches da etapa 6. Se retomou em outro terminal, carregue o ambiente da etapa 17.2 e as variáveis AI-Q da 11.1. Preserve `config/lab.env`: ele permite voltar ao Super 120B.
 
 ### 19.1. Preparar o modelo
