@@ -1,0 +1,19 @@
+# Carregue por ultimo, depois dos quatro arquivos Compose oficiais do RAG.
+# !override substitui a reserva anterior de quatro GPUs (Compose >= 2.24.4).
+services:
+  nim-llm:
+    image: nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b:2.0.13
+    volumes:
+      - ${LAB_ROOT:?export LAB_ROOT}/.local/cache/lightning:/opt/nim/.cache
+    environment:
+      NIM_MODEL_PROFILE: ${LIGHTNING_PROFILE:?preencha o perfil Lightning BF16 TP2}
+      NIM_SERVED_MODEL_NAME: ${LLM_MODEL:?carregue config/lightning.env}
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import json,urllib.request; r=json.load(urllib.request.urlopen('http://localhost:8000/v1/health/ready', timeout=10)); assert r.get('status') == 'ready', r"]
+    deploy:
+      resources:
+        reservations:
+          devices: !override
+            - driver: nvidia
+              device_ids: ['${LIGHTNING_GPU_0:-0}', '${LIGHTNING_GPU_1:-1}']
+              capabilities: [gpu]

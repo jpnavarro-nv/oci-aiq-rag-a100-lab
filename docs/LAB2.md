@@ -1198,6 +1198,155 @@ docker compose -p "$AIQ_PROJECT_NAME" -f "$AIQ_COMPOSE_FILE" \
 
 Ao compartilhar um erro, remova chaves, senhas e dados privados. Não compartilhe `config/secrets.env`, ambientes completos de contêineres ou a configuração Compose expandida.
 
+## 19. Alternativa: Lightning 30B em duas A100
+
+Esta alternativa troca somente o modelo de linguagem compartilhado por RAG e AI-Q por **Nemotron 3.5 Lightning 30B-A3B, NIM 2.0.13, BF16 TP2**. Os agentes, ferramentas, bancos, embeddings e extração continuam iguais. O upstream AI-Q usa também Ultra para pesquisa profunda; executar todos os papéis com Lightning é uma adaptação deste laboratório, cuja conclusão de relatórios precisa ser validada.
+
+Execute na raiz do clone, após aplicar os patches da etapa 6. Se retomou em outro terminal, carregue o ambiente da etapa 17.2 e as variáveis AI-Q da 11.1. Preserve `config/lab.env`: ele permite voltar ao Super 120B.
+
+### 19.1. Preparar o modelo
+
+Copie a configuração alternativa uma única vez.
+
+```bash
+cp -i config/lightning.env.example config/lightning.env
+```
+
+Crie o cache exclusivo do Lightning, como seu usuário.
+
+```bash
+mkdir -p .local/cache/lightning
+```
+
+Conclua ou cancele pesquisas em execução. Pare apenas o modelo de linguagem do laboratório; isso libera as GPUs 0–3. As APIs ficam temporariamente sem inferência.
+
+```bash
+docker stop --timeout 120 "${LAB_ID}-rag-nim-llm"
+```
+
+Consulte os perfis da imagem Lightning nas duas GPUs escolhidas.
+
+```bash
+docker run --rm --pull missing --user "$USERID:0" --runtime=nvidia \
+  -e NVIDIA_VISIBLE_DEVICES=0,1 -e NGC_API_KEY \
+  -v "$PWD/.local/cache/lightning:/opt/nim/.cache" \
+  nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b:2.0.13 list-model-profiles
+```
+
+Edite o arquivo e preencha `LIGHTNING_PROFILE` com o identificador completo de um perfil **BF16 TP2, sem LoRA, compatível e executável**. Ajuste `LIGHTNING_GPU_0` e `LIGHTNING_GPU_1` se escolheu GPUs diferentes. Não reutilize o perfil do Super 120B.
+
+```bash
+nano config/lightning.env
+```
+
+Carregue os valores da alternativa.
+
+```bash
+source config/lightning.env
+```
+
+Exporte-os para o Compose. Isso também substitui um `LLM_MODEL` que tenha sido carregado anteriormente nesta sessão.
+
+```bash
+export LLM_MODEL LIGHTNING_PROFILE LIGHTNING_GPU_0 LIGHTNING_GPU_1
+```
+
+### 19.2. Iniciar e testar a inferência
+
+Valide os arquivos oficiais com o pequeno override do Lightning carregado por último. Ele substitui a imagem, o perfil, o cache e a reserva de quatro GPUs por duas; o UID e os parsers continuam os do patch.
+
+```bash
+docker compose -p "$RAG_PROJECT_NAME" --profile lab2 \
+  -f "$RAG_COMPOSE_DIR/nims.yaml" -f "$RAG_COMPOSE_DIR/vectordb.yaml" \
+  -f "$RAG_COMPOSE_DIR/docker-compose-ingestor-server.yaml" \
+  -f "$RAG_COMPOSE_DIR/docker-compose-rag-server.yaml" -f config/compose.lightning.yaml \
+  --env-file config/lab.env --env-file config/secrets.env --env-file config/lightning.env config --quiet
+```
+
+Inicie o Lightning e atualize as APIs RAG para usar seu nome de modelo. Os pesos serão baixados no primeiro uso.
+
+```bash
+docker compose -p "$RAG_PROJECT_NAME" --profile lab2 \
+  -f "$RAG_COMPOSE_DIR/nims.yaml" -f "$RAG_COMPOSE_DIR/vectordb.yaml" \
+  -f "$RAG_COMPOSE_DIR/docker-compose-ingestor-server.yaml" \
+  -f "$RAG_COMPOSE_DIR/docker-compose-rag-server.yaml" -f config/compose.lightning.yaml \
+  --env-file config/lab.env --env-file config/secrets.env --env-file config/lightning.env \
+  up -d --pull missing --no-build --wait --wait-timeout 7200 nim-llm rag-server ingestor-server
+```
+
+Confira o nome servido pela API.
+
+```bash
+curl -fsS --max-time 30 http://127.0.0.1:18999/v1/models
+```
+
+Teste uma resposta textual. O modelo no corpo precisa ser o Lightning.
+
+```bash
+curl --fail-with-body --max-time 300 http://127.0.0.1:18999/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"nvidia/nemotron-3.5-lightning-30b-a3b","messages":[{"role":"user","content":"Explique em duas frases o que é OCI Supercluster."}],"max_tokens":512,"chat_template_kwargs":{"enable_thinking":false}}'
+```
+
+### 19.3. Atualizar o AI-Q e gerar um relatório
+
+Atualize o agente AI-Q para usar o mesmo modelo local.
+
+```bash
+docker compose -p "$AIQ_PROJECT_NAME" -f "$AIQ_COMPOSE_FILE" \
+  --env-file config/lab.env --env-file config/secrets.env --env-file config/lightning.env \
+  up -d --pull missing --no-build aiq-agent
+```
+
+Confira a API após a inicialização. As tentativas abaixo cobrem o tempo de subida do backend.
+
+```bash
+curl -fsS --retry 30 --retry-delay 2 --retry-all-errors --retry-max-time 180 \
+  --max-time 30 http://127.0.0.1:18000/health
+```
+
+Abra uma nova sessão no AI-Q, anexe o PDF e habilite **Web Search**, seguindo a etapa 13. Use a mesma pergunta na comparação entre os modelos:
+
+> Gere um relatório executivo curto sobre OCI Supercluster e NVIDIA, usando o PDF anexado e fontes oficiais da web. Inclua as citações e uma seção final Sources.
+
+A validação termina quando o relatório está disponível, com citações e exportação. Uma resposta de chat ou um contêiner em execução não confirma esse resultado. Compare o tempo total e a conclusão do relatório; mantenha os limites de pesquisa e as verificações de citações.
+
+Ao retomar esta alternativa em outro terminal, carregue o ambiente normal e depois repita os dois blocos `source config/lightning.env` e `export` da 19.1. Nos comandos RAG, inclua sempre `-f config/compose.lightning.yaml` por último; nos dois projetos, inclua `--env-file config/lightning.env` por último.
+
+### 19.4. Voltar ao Super 120B
+
+Conclua ou cancele pesquisas em execução. Recarregue o nome original do modelo.
+
+```bash
+source config/lab.env
+```
+
+Exporte o nome original para os serviços.
+
+```bash
+export LLM_MODEL
+```
+
+Inicie o modelo e as APIs sem o override Lightning. O cache original é preservado.
+
+```bash
+docker compose -p "$RAG_PROJECT_NAME" --profile lab2 \
+  -f "$RAG_COMPOSE_DIR/nims.yaml" -f "$RAG_COMPOSE_DIR/vectordb.yaml" \
+  -f "$RAG_COMPOSE_DIR/docker-compose-ingestor-server.yaml" \
+  -f "$RAG_COMPOSE_DIR/docker-compose-rag-server.yaml" \
+  --env-file config/lab.env --env-file config/secrets.env \
+  up -d --pull missing --no-build --wait --wait-timeout 7200 nim-llm rag-server ingestor-server
+```
+
+Atualize também o AI-Q para o modelo original.
+
+```bash
+docker compose -p "$AIQ_PROJECT_NAME" -f "$AIQ_COMPOSE_FILE" \
+  --env-file config/lab.env --env-file config/secrets.env up -d --no-build aiq-agent
+```
+
+Confira novamente `/v1/models` e a saúde do AI-Q antes de usar a interface.
+
 ## Referências
 
 - [NVIDIA AI-Q 2.2.1: Docker Compose](https://github.com/NVIDIA-AI-Blueprints/deep-researcher-agent/blob/v2.2.1/deploy/compose/README.md).

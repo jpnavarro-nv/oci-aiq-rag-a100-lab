@@ -4,6 +4,7 @@
 .local/
 config/lab.env
 config/secrets.env
+config/lightning.env
 __pycache__/
 *.pyc
 .DS_Store
