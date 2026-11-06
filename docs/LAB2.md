@@ -890,13 +890,11 @@ A janela anônima evita reutilizar o histórico salvo no navegador durante este 
 Na sessão preparada na etapa 13, envie a pesquisa abaixo. O escopo é curto para facilitar a demonstração:
 
 ```text
-Redija todo o relatório em português do Brasil, incluindo título e subtítulos.
+Produza um relatório executivo em português do Brasil sobre como OCI Supercluster e NVIDIA se complementam para executar IA. Use o PDF anexado e pesquisa web somente em oracle.com, nvidia.com e seus subdomínios.
 
-Usando o PDF anexado e pesquisa web em fontes oficiais Oracle e NVIDIA, explique como OCI Supercluster e NVIDIA se complementam para executar soluções de IA.
+Organize o texto em três tópicos breves: GPUs, rede e software NVIDIA. Distinga as informações do PDF das encontradas na web. Prossiga sem pedir esclarecimentos.
 
-Escreva um relatório curto em português, com até 600 palavras e uma tabela de três linhas: GPUs, rede e software NVIDIA. Diferencie o que vem do PDF e o que foi encontrado na web.
-
-Inclua citações [1], [2] no texto e uma seção final “Sources” com as referências numeradas, preservando os identificadores e URLs retornados pelas ferramentas. Não invente fontes. Prossiga sem solicitar esclarecimentos.
+Inclua citações numeradas no texto e uma única bibliografia ao final, com o cabeçalho literal "## Sources". Preserve os identificadores, URLs e títulos originais retornados pelas ferramentas; não renumere nem invente referências. Não crie outra seção Fontes ou Referências. Apenas o cabeçalho Sources e os títulos originais das referências ficam fora da tradução.
 ```
 
 Se o agente pedir esclarecimentos, responda com o foco e o nível de detalhe desejados. Para prosseguir sem acrescentar detalhes, digite `skip`.
@@ -910,7 +908,7 @@ Acompanhe a pesquisa até o estado **Done** e a disponibilização do relatório
 Opcionalmente, envie uma mensagem curta na mesma sessão para demonstrar o refinamento:
 
 ```text
-Resuma o relatório em português do Brasil, em cinco pontos para uma apresentação sobre OCI e NVIDIA. Preserve as citações e a seção Sources.
+Resuma o relatório em português do Brasil em cinco pontos sobre OCI e NVIDIA. Preserve as citações, seus identificadores e URLs, e uma única seção final "## Sources". Não renumere as referências.
 ```
 
 Aguarde a conclusão e compare o conteúdo refinado com a versão anterior.
@@ -919,7 +917,7 @@ Aguarde a conclusão e compare o conteúdo refinado com a versão anterior.
 
 Abra o relatório no painel de visualização. No rodapé de exportação, selecione **PDF** ou **Markdown**. A exportação fica disponível quando a pesquisa termina.
 
-Salve o arquivo no seu computador e confira o conteúdo e a lista de fontes no documento exportado.
+Salve o arquivo no seu computador. Confira se há uma única seção `Sources`, se cada citação aponta para a mesma referência no texto e na lista, e se as fontes web são da Oracle ou NVIDIA. O pedido orienta o modelo, mas não configura um filtro técnico de domínios no Tavily. Se houver fontes externas ou numeração conflitante, o relatório ainda precisa de revisão.
 
 ## 15. Explorar outros cenários
 
@@ -942,7 +940,7 @@ Use a lista abaixo para conferir a conclusão do laboratório:
 - [ ] A consulta RAG retornou evidências dos documentos corretos.
 - [ ] A sessão AI-Q contém o PDF OCI e Web Search habilitada.
 - [ ] A pesquisa combinada consultou o PDF e fontes web.
-- [ ] O relatório concluiu sem erro, foi exportado e teve suas fontes conferidas.
+- [ ] O relatório concluiu sem erro e foi exportado em português, com uma única bibliografia, citações correspondentes e fontes web Oracle/NVIDIA conferidas.
 
 ## 17. Parar e retomar
 
@@ -953,13 +951,13 @@ No terminal do servidor, na raiz do clone, conclua ou cancele pesquisas ativas. 
 Pare os contêineres do AI-Q.
 
 ```bash
-docker ps -q --filter "label=com.docker.compose.project=${AIQ_PROJECT_NAME:?defina as variaveis AI-Q da etapa 11.1}" | xargs -r docker stop --time 120
+docker ps -q --filter "label=com.docker.compose.project=${AIQ_PROJECT_NAME:?defina as variaveis AI-Q da etapa 11.1}" | xargs -r docker stop --timeout 120
 ```
 
 Pare os contêineres do RAG.
 
 ```bash
-docker ps -q --filter "label=com.docker.compose.project=${RAG_PROJECT_NAME:?carregue o ambiente da etapa 17.2}" | xargs -r docker stop --time 120
+docker ps -q --filter "label=com.docker.compose.project=${RAG_PROJECT_NAME:?carregue o ambiente da etapa 17.2}" | xargs -r docker stop --timeout 120
 ```
 
 Os comandos selecionam somente os dois projetos do laboratório. Contêineres, imagens, volumes e caches ficam preservados.
@@ -1018,9 +1016,17 @@ export NGC_API_KEY
 
 Mantenha os arquivos `config/lab.env` e `config/secrets.env`, incluindo o `LAB_ID` e a senha PostgreSQL. Não gere um novo identificador para retomar a mesma instalação.
 
-Se os contêineres continuam executando, volte ao ponto em que parou. Para comandos AI-Q, recarregue também as duas variáveis da etapa **11.1**; as definições acima preparam o contexto comum e o RAG. Se os serviços foram parados, repita as etapas **7, 8, 9 e 11.1**. Não reaplique os patches nem crie novamente as coleções. Os volumes identificados por `LAB_ID` e os caches deste clone serão reutilizados.
+Os blocos acima carregam somente o ambiente comum. Agora siga a retomada do perfil que você já instalou:
 
-Se apenas o AI-Q foi parado e o RAG continua ativo, retome pela etapa 11.1. Se também fechou as abas dos túneis no seu computador, reabra o RAG pela etapa 10.1 e o AI-Q pela etapa 11.2.
+| Perfil instalado | Retomada |
+| --- | --- |
+| Super 120B em todos os papéis (roteiro-base) | Etapas **7, 8, 9 e 11.1**; se apenas o AI-Q parou, use **11.1** |
+| Lightning 30B em duas GPUs | Etapa **19.5** |
+| Super 120B no planner + Lightning nos demais papéis | Etapa **20.4** |
+
+Use somente a linha correspondente à instalação existente. As alternativas 19 e 20 precisam de seus arquivos de ambiente e overrides também na retomada; executar o Compose-base pode trocar o modelo e a reserva de GPUs. A existência de um arquivo `.env` não indica qual perfil está ativo.
+
+Não reaplique patches, não gere outro `LAB_ID` nem crie novamente as coleções. Os volumes e caches deste clone serão reutilizados. Se os serviços continuam executando, basta carregar as variáveis do perfil e voltar ao ponto em que parou. Se fechou os túneis, reabra o RAG pela etapa 10.1 e o AI-Q pela 11.2.
 
 ### 17.3. Recriar contêineres sem apagar dados
 
@@ -1114,7 +1120,7 @@ O primeiro carregamento pode incluir downloads e preparação dos modelos. Um ti
 
 ### Erro de memória ou perfil incompatível
 
-Confirme a reserva das GPUs, a memória livre e o perfil BF16 TP4 escolhido. Não encerre processos de outros usuários. Execute a consulta de perfis somente quando as quatro GPUs do LLM estiverem livres.
+Confirme a reserva das GPUs, a memória livre e o perfil escolhido: BF16 TP4 no roteiro-base, TP2 na alternativa 19, ou Super TP4 + Lightning TP1 na opção 20. Não encerre processos de outros usuários. Consulte perfis somente nas GPUs livres reservadas ao modelo correspondente.
 
 ### A interface não abre
 
@@ -1151,7 +1157,7 @@ Se os logs mostrarem `PermissionError` ao abrir `/app/configs/config_web_frag.ym
 chmod -R a+rX upstream/aiq/configs
 ```
 
-Repita a inicialização do AI-Q e o teste HTTP da etapa 11.1. Continue para o túnel somente quando a API responder com estado `healthy`.
+Retome o bloco AI-Q do perfil selecionado na etapa **17.2** e depois execute seu teste HTTP. Continue para o túnel somente quando a API responder com estado `healthy`.
 
 ### Ingestão ou dependência indisponível
 
@@ -1191,12 +1197,7 @@ Disponibilize as credenciais carregadas para os próximos comandos.
 export NGC_API_KEY TAVILY_API_KEY LAB_DB_PASSWORD
 ```
 
-Inicie os serviços e aguarde a conclusão do comando.
-
-```bash
-docker compose -p "$AIQ_PROJECT_NAME" -f "$AIQ_COMPOSE_FILE" \
-  --env-file config/lab.env --env-file config/secrets.env up -d --pull missing --no-build aiq-agent
-```
+Atualize o AI-Q pelo bloco de retomada do seu perfil, indicado na etapa **17.2**, preservando seus arquivos de ambiente. Depois execute o teste HTTP daquele bloco.
 
 Ao compartilhar um erro, remova chaves, senhas e dados privados. Não compartilhe `config/secrets.env`, ambientes completos de contêineres ou a configuração Compose expandida.
 
@@ -1206,7 +1207,7 @@ Esta alternativa troca somente o modelo de linguagem compartilhado por RAG e AI-
 
 **Alternativa experimental.** Na validação de 05/11/2026 em duas A100 de 80 GB, passaram chat, chamadas de ferramentas e resposta RAG ao PDF com fontes. A pesquisa profunda consultou PDF e web, mas terminou sem gravar o relatório (`writer_output_not_committed`). Portanto, esta alternativa está disponível para testes de inferência e integração; a geração completa de relatórios ainda não foi aprovada. Não há ganho de tempo do relatório comprovado.
 
-Execute na raiz do clone, após aplicar os patches da etapa 6. Se retomou em outro terminal, carregue o ambiente da etapa 17.2 e as variáveis AI-Q da 11.1. Preserve `config/lab.env`: ele permite voltar ao Super 120B.
+Execute na raiz do clone, após aplicar os patches da etapa 6. Se retomou em outro terminal, carregue os blocos comuns da etapa 17.2, até `export NGC_API_KEY`. Preserve `config/lab.env`: ele permite voltar ao Super 120B.
 
 ### 19.1. Preparar o modelo
 
@@ -1306,6 +1307,18 @@ curl --fail-with-body --max-time 300 http://127.0.0.1:18999/v1/chat/completions 
 
 ### 19.3. Atualizar o AI-Q e gerar um relatório
 
+Defina o projeto AI-Q nesta sessão.
+
+```bash
+export AIQ_PROJECT_NAME="${LAB_ID}-aiq"
+```
+
+Defina o arquivo Compose oficial, a partir da raiz do clone.
+
+```bash
+export AIQ_COMPOSE_FILE="$PWD/upstream/aiq/deploy/compose/docker-compose.yaml"
+```
+
 Atualize o agente AI-Q para usar o mesmo modelo local.
 
 ```bash
@@ -1321,13 +1334,13 @@ curl -fsS --retry 30 --retry-delay 2 --retry-all-errors --retry-max-time 180 \
   --max-time 30 http://127.0.0.1:18000/health
 ```
 
-Abra uma nova sessão no AI-Q, anexe o PDF e habilite **Web Search**, seguindo a etapa 13. Use a mesma pergunta na comparação entre os modelos:
+Abra uma nova sessão no AI-Q, anexe o PDF e habilite **Web Search**, seguindo a etapa 13. Para comparar os modelos, mantenha o mesmo pedido e as mesmas fontes:
 
-> Redija todo o relatório em português do Brasil, incluindo título e subtítulos. Explique como OCI Supercluster e NVIDIA se complementam, usando o PDF anexado e fontes oficiais da web. Inclua citações e a seção Sources; preserve os URLs e os títulos originais das referências.
+Use o pedido da etapa **14.1**. Ele solicita português do Brasil, fontes oficiais e uma única seção `Sources`, preservando os identificadores e URLs das citações.
 
 A validação termina quando o relatório está disponível, com citações e exportação. Uma resposta de chat ou um contêiner em execução não confirma esse resultado. Compare o tempo total e a conclusão do relatório; mantenha os limites de pesquisa e as verificações de citações.
 
-Ao retomar esta alternativa em outro terminal, carregue o ambiente normal e depois repita os dois blocos `source config/lightning.env` e `export` da 19.1. Nos comandos RAG, inclua sempre `-f config/compose.lightning.yaml` por último; nos dois projetos, inclua `--env-file config/lightning.env` por último.
+Para retomar esta instalação em outro terminal ou após parar os serviços, siga a etapa **19.5**.
 
 ### 19.4. Voltar ao Super 120B
 
@@ -1347,10 +1360,10 @@ Recarregue o nome original do modelo.
 source config/lab.env
 ```
 
-Exporte o nome original para os serviços.
+Exporte o nome e o contexto originais para os serviços.
 
 ```bash
-export LLM_MODEL
+export LLM_MODEL LLM_CONTEXT
 ```
 
 Inicie o modelo e as APIs sem o override Lightning. O cache original é preservado.
@@ -1373,11 +1386,79 @@ docker compose -p "$AIQ_PROJECT_NAME" -f "$AIQ_COMPOSE_FILE" \
 
 Confira novamente `/v1/models` e a saúde do AI-Q antes de usar a interface.
 
+### 19.5. Retomar Lightning em duas GPUs
+
+Use somente para uma instalação já configurada com este perfil. Na raiz do clone, carregue primeiro os blocos comuns da etapa **17.2**, até `export NGC_API_KEY`. Preserve os arquivos preenchidos e os patches aplicados.
+
+Carregue a configuração Lightning.
+
+```bash
+source config/lightning.env
+```
+
+Exporte o modelo, os contextos e o perfil selecionados.
+
+```bash
+export LLM_MODEL LLM_CONTEXT LIGHTNING_PROFILE LIGHTNING_GPU_0 LIGHTNING_GPU_1
+```
+
+**RAG:** se os serviços foram parados, inicie o conjunto completo com os arquivos deste perfil. Se o RAG já está funcionando e você só vai retomar o AI-Q, passe ao bloco AI-Q abaixo.
+
+```bash
+docker compose -p "$RAG_PROJECT_NAME" --profile lab2 \
+  -f "$RAG_COMPOSE_DIR/nims.yaml" -f "$RAG_COMPOSE_DIR/vectordb.yaml" \
+  -f "$RAG_COMPOSE_DIR/docker-compose-ingestor-server.yaml" \
+  -f "$RAG_COMPOSE_DIR/docker-compose-rag-server.yaml" \
+  -f config/compose.lightning.yaml \
+  --env-file config/lab.env --env-file config/secrets.env \
+  --env-file config/lightning.env \
+  up -d --pull missing --no-build --wait --wait-timeout 7200 \
+  nim-llm nemotron-vlm-embedding-ms nemotron-ranking-ms \
+  page-elements graphic-elements table-structure nemotron-ocr \
+  elasticsearch seaweedfs redis nv-ingest-ms-runtime ingestor-server rag-server rag-frontend
+```
+
+Teste a API RAG e suas dependências após a inicialização.
+
+```bash
+curl -fsS --max-time 60 'http://127.0.0.1:18081/v1/health?check_dependencies=true'
+```
+
+**AI-Q:** defina o projeto nesta mesma sessão.
+
+```bash
+export AIQ_PROJECT_NAME="${LAB_ID}-aiq"
+```
+
+Defina o arquivo Compose oficial.
+
+```bash
+export AIQ_COMPOSE_FILE="$PWD/upstream/aiq/deploy/compose/docker-compose.yaml"
+```
+
+Se o AI-Q foi parado ou suas credenciais mudaram, inicie os três serviços com o ambiente deste perfil.
+
+```bash
+docker compose -p "$AIQ_PROJECT_NAME" -f "$AIQ_COMPOSE_FILE" \
+  --env-file config/lab.env --env-file config/secrets.env \
+  --env-file config/lightning.env \
+  up -d --pull missing --no-build --wait --wait-timeout 1200 postgres aiq-agent frontend
+```
+
+Teste a API. Prossiga quando responder `healthy`, com `dask_available: true` e `db: ok`.
+
+```bash
+curl -fsS --retry 30 --retry-delay 2 --retry-all-errors --retry-max-time 180 \
+  --max-time 30 http://127.0.0.1:18000/health
+```
+
+Reabra os túneis das etapas 10.1 e 11.2 se necessário. Para validar um relatório, crie uma sessão nova e siga as etapas **13 e 14.1**. Retomar serviços preserva os dados; não comprova, por si só, a conclusão da pesquisa.
+
 ## 20. Planner Super 120B e workhorse Lightning locais
 
 Esta opção mantém **Super 120B no planner** e usa **Lightning nos demais papéis**, inclusive pesquisa, orquestração, escrita e RAG. Todos os modelos são executados na instância. A pesquisa web continua usando Tavily. A associação por papel é uma configuração nativa do AI-Q; os agentes e as verificações de citações permanecem originais.
 
-Este perfil concluiu um teste real com PDF e pesquisa web em A100, com relatório final em português do Brasil e exportação PDF, em aproximadamente 4 min 15 s. Confirme o mesmo fluxo na sua instalação pela etapa 20.3. O ensaio confirmou a execução e o idioma; revise o conteúdo antes de compartilhar.
+Este perfil concluiu um teste real com PDF e pesquisa web em A100, com relatório final em português do Brasil e exportação PDF, em aproximadamente 4 min 15 s. A revisão identificou bibliografias duplicadas e fontes de terceiros nesse relatório. O pedido da etapa 14.1 foi ajustado, mas ainda precisa de um novo ensaio. Confirme o fluxo na sua instalação pela etapa 20.3 e confira as referências antes de compartilhar.
 
 | GPUs | Serviço |
 | --- | --- |
@@ -1424,7 +1505,7 @@ Preencha `LIGHTNING_PROFILE` em `config/planner.env` com o identificador complet
 nano config/planner.env
 ```
 
-Carregue os valores na ordem abaixo. Se abriu outro terminal, carregue antes o ambiente da etapa 17.2 e as variáveis AI-Q da 11.1.
+Carregue os valores na ordem abaixo. Se abriu outro terminal, carregue antes os blocos comuns da etapa 17.2, até `export NGC_API_KEY`.
 
 ```bash
 source config/lightning.env
@@ -1473,6 +1554,18 @@ docker compose -p "$RAG_PROJECT_NAME" --profile lab2 \
 
 ### 20.3. Reiniciar e testar o AI-Q
 
+Defina o projeto AI-Q nesta sessão.
+
+```bash
+export AIQ_PROJECT_NAME="${LAB_ID}-aiq"
+```
+
+Defina o arquivo Compose oficial, a partir da raiz do clone.
+
+```bash
+export AIQ_COMPOSE_FILE="$PWD/upstream/aiq/deploy/compose/docker-compose.yaml"
+```
+
 Recrie o agente para carregar a nova associação do planner. Os volumes são preservados.
 
 ```bash
@@ -1489,15 +1582,89 @@ curl -fsS --retry 30 --retry-delay 2 --retry-all-errors --retry-max-time 180 \
   --max-time 30 http://127.0.0.1:18000/health
 ```
 
-Abra uma sessão nova no AI-Q, anexe o PDF OCI e habilite **Web Search**, como na etapa 13. Solicite:
+Abra uma sessão nova no AI-Q, anexe o PDF OCI e habilite **Web Search**, como na etapa 13.
 
-> Redija todo o relatório em português do Brasil, incluindo título e subtítulos. Explique como OCI Supercluster e NVIDIA se complementam, usando o PDF anexado e fontes oficiais da web. Inclua citações e a seção Sources; preserve os URLs e os títulos originais das referências.
+Use o pedido da etapa **14.1**. Ele solicita português do Brasil, fontes oficiais e uma única seção `Sources`, preservando os identificadores e URLs das citações.
 
 Confirme a disponibilidade do relatório, suas referências e a exportação. Os healthchecks confirmam prontidão dos serviços; o teste completo depende da conclusão desse fluxo.
 
-Na retomada, carregue o ambiente normal, depois `config/lightning.env` e `config/planner.env`, nessa ordem, e repita o `export` da 20.1. Use sempre os dois overrides e os quatro arquivos de ambiente nos comandos RAG. Nos comandos AI-Q, use os quatro arquivos de ambiente.
+Para retomar esta instalação em outro terminal ou após parar os serviços, siga a etapa **20.4**.
 
 Para voltar à alternativa 19, conclua ou cancele as pesquisas, pare `"${LAB_ID}-rag-nim-planner"`, reverta somente `aiq-v2.2.1-planner.patch` e execute a etapa 19 a partir do carregamento de `config/lightning.env`. Para voltar ao Super em todos os papéis, continue pela 19.4 depois dessa reversão.
+
+### 20.4. Retomar Super planner + Lightning
+
+Use somente para uma instalação já configurada com este perfil. Na raiz do clone, carregue primeiro os blocos comuns da etapa **17.2**, até `export NGC_API_KEY`. Preserve os arquivos preenchidos e os patches aplicados.
+
+Carregue a configuração Lightning.
+
+```bash
+source config/lightning.env
+```
+
+Carregue o perfil de uma GPU, que prevalece sobre o anterior.
+
+```bash
+source config/planner.env
+```
+
+Exporte o modelo, os contextos e o perfil selecionados.
+
+```bash
+export LLM_MODEL LLM_CONTEXT LIGHTNING_PROFILE LIGHTNING_GPU_0 PLANNER_CONTEXT
+```
+
+**RAG:** se os serviços foram parados, inicie o conjunto completo com os arquivos deste perfil. Se o RAG já está funcionando e você só vai retomar o AI-Q, passe ao bloco AI-Q abaixo.
+
+```bash
+docker compose -p "$RAG_PROJECT_NAME" --profile lab2 \
+  -f "$RAG_COMPOSE_DIR/nims.yaml" -f "$RAG_COMPOSE_DIR/vectordb.yaml" \
+  -f "$RAG_COMPOSE_DIR/docker-compose-ingestor-server.yaml" \
+  -f "$RAG_COMPOSE_DIR/docker-compose-rag-server.yaml" \
+  -f config/compose.lightning.yaml -f config/compose.planner.yaml \
+  --env-file config/lab.env --env-file config/secrets.env \
+  --env-file config/lightning.env --env-file config/planner.env \
+  up -d --pull missing --no-build --wait --wait-timeout 7200 \
+  nim-llm nim-planner nemotron-vlm-embedding-ms nemotron-ranking-ms \
+  page-elements graphic-elements table-structure nemotron-ocr \
+  elasticsearch seaweedfs redis nv-ingest-ms-runtime ingestor-server rag-server rag-frontend
+```
+
+Teste a API RAG e suas dependências após a inicialização.
+
+```bash
+curl -fsS --max-time 60 'http://127.0.0.1:18081/v1/health?check_dependencies=true'
+```
+
+**AI-Q:** defina o projeto nesta mesma sessão.
+
+```bash
+export AIQ_PROJECT_NAME="${LAB_ID}-aiq"
+```
+
+Defina o arquivo Compose oficial.
+
+```bash
+export AIQ_COMPOSE_FILE="$PWD/upstream/aiq/deploy/compose/docker-compose.yaml"
+```
+
+Se o AI-Q foi parado ou suas credenciais mudaram, inicie os três serviços com o ambiente deste perfil.
+
+```bash
+docker compose -p "$AIQ_PROJECT_NAME" -f "$AIQ_COMPOSE_FILE" \
+  --env-file config/lab.env --env-file config/secrets.env \
+  --env-file config/lightning.env --env-file config/planner.env \
+  up -d --pull missing --no-build --wait --wait-timeout 1200 postgres aiq-agent frontend
+```
+
+Teste a API. Prossiga quando responder `healthy`, com `dask_available: true` e `db: ok`.
+
+```bash
+curl -fsS --retry 30 --retry-delay 2 --retry-all-errors --retry-max-time 180 \
+  --max-time 30 http://127.0.0.1:18000/health
+```
+
+Reabra os túneis das etapas 10.1 e 11.2 se necessário. Para validar um relatório, crie uma sessão nova e siga as etapas **13 e 14.1**. Retomar serviços preserva os dados; não comprova, por si só, a conclusão da pesquisa.
 
 ## Referências
 
